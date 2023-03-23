@@ -2,6 +2,8 @@
 
 This is a sample plugin for Obsidian (https://obsidian.md).
 
+由于 Azure 的权限设计过于优（sha）秀（bi），所以目前无法支持 outlook 的日历同步。
+
 This project uses Typescript to provide type checking and documentation.
 The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
 
