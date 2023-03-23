@@ -1,5 +1,9 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
+// import type { OAuth2Client } from 'google-auth-library';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+// import { authenticate } from '@google-cloud/local-auth';
+// import { google } from "googleapis";
+// import { EditorSelection, Range } from '@codemirror/state';
 // Remember to rename these classes and interfaces!
 
 interface MyPluginSettings {
@@ -9,12 +13,11 @@ interface MyPluginSettings {
 const DEFAULT_SETTINGS: MyPluginSettings = {
   mySetting: 'default'
 }
+// const {GoogleAuth} = require('@google-cloud/local-auth');
 
-const fs = require('fs').promises;
-const path = require('path');
-const process = require('process');
-const { authenticate, OAuth2Client } = require('@google-cloud/local-auth');
-const { google } = require('googleapis');
+// const fs = require('fs').promises;
+// const path = require('path');
+// const process = require('process');
 
 
 
@@ -71,57 +74,62 @@ export default class MyPlugin extends Plugin {
     //   await fs.writeFile(TOKEN_PATH, payload);
     // }
 
-    /**
-     * Load or request or authorization to call APIs.
-     *
-     */
+    // /**
+    //  * Load or request or authorization to call APIs.
+    //  *
+    //  */
+
+
+
     async function authorize() {
       // let client = await loadSavedCredentialsIfExist();
       // if (client) {
       //   return client;
       // }
-      let client = await authenticate({
-        scopes: SCOPES,
-        keyfilePath: '/Users/dustinksi/.cache/obsidian/cred.json',
-      });
+      // let client = await authenticate({
+      //   scopes: SCOPES,
+      //   keyfilePath: '/Users/dustinksi/.cache/obsidian/cred.json',
+      // });
       // if (client.credentials) {
       //   await saveCredentials(client);
       // }
-      return client;
+      // return client;
     }
 
-    /**
-     * Lists the next 10 events on the user's primary calendar.
-     * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
-     */
-    async function listEvents(auth) {
-      const calendar = google.calendar({ version: 'v3', auth });
-      const res = await calendar.events.list({
-        calendarId: 'primary',
-        timeMin: new Date().toISOString(),
-        maxResults: 10,
-        singleEvents: true,
-        orderBy: 'startTime',
-      });
-      const events = res.data.items;
-      if (!events || events.length === 0) {
-        console.log('No upcoming events found.');
-        return;
-      }
-      console.log('Upcoming 10 events:');
-      events.map((event, i) => {
-        const start = event.start.dateTime || event.start.date;
-        console.log(`${start} - ${event.summary}`);
-      });
-    }
+    // /**
+    //  * Lists the next 10 events on the user's primary calendar.
+    //  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+    //  */
+    // async function listEvents(auth: OAuth2Client) {
+
+    //   const calendar = google.calendar({ version: 'v3', auth });
+    //   const res = await calendar.events.list({
+    //     calendarId: 'primary',
+    //     timeMin: new Date().toISOString(),
+    //     maxResults: 10,
+    //     singleEvents: true,
+    //     orderBy: 'startTime',
+    //   });
+    //   const events = res.data.items;
+    //   if (!events || events.length === 0) {
+    //     console.log('No upcoming events found.');
+    //     return;
+    //   }
+    //   console.log('Upcoming 10 events:');
+    //   events.map((event, i) => {
+    //     const start = event.start.dateTime || event.start.date;
+    //     console.log(`${start} - ${event.summary}`);
+    //   });
+    // }
 
 
     // This creates an icon in the left ribbon.
     const ribbonIconEl = this.addRibbonIcon('sync', 'Sync With Calendar', (evt: MouseEvent) => {
       new Notice('Will open google!');
-      authorize().then(listEvents).catch(console.error);
+      // authorize().then(listEvents).catch(console.error);
       new Notice('Hi from dexin.qi with new arch!');
     });
+
     // Perform additional things with the ribbon
     ribbonIconEl.addClass('my-plugin-ribbon-class');
 

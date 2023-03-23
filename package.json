@@ -2,10 +2,10 @@
   "name": "obsidian-task-calendar-sync",
   "version": "1.0.0",
   "description": "This is a calendar sync plugin for Obsidian (https://obsidian.md)",
-  "main": "dist/main.js",
+  "main": "main.js",
   "scripts": {
-    "dev": "npm run build && cp -R dist/* test-vault/.obsidian/plugins/todoist-sync-plugin/",
-    "build": "rollup -c",
+    "dev": "npx rollup --config rollup.config.js -w",
+    "build": "npx rollup --config rollup.config.js --environment BUILD:production",
     "test": "mocha -r ts-node/register tests/*.ts",
     "format": "prettier --write src/**/*",
     "lint": "prettier --check src/**/*"
@@ -13,34 +13,30 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
-  "devDependencies": {
-    "@rollup/plugin-typescript": "^5.0.2",
-    "@tsconfig/svelte": "^1.0.10",
-    "@types/chai": "^4.2.14",
-    "chai": "^4.2.0",
-    "obsidian": "latest",
-    "prettier": "^2.2.0",
-    "prettier-plugin-svelte": "^1.4.1",
-    "rollup-plugin-copy": "^3.3.0",
-    "svelte-check": "^1.1.23",
-    "svelte-preprocess": "^4.6.1",
-    "ts-node": "^9.0.0"
-  },
   "dependencies": {
     "@google-cloud/local-auth": "^2.1.0",
-    "@microsoft/microsoft-graph-client": "^3.0.5",
     "@rollup/plugin-commonjs": "^15.1.0",
     "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-typescript": "^5.0.2",
     "@types/mocha": "^10.0.1",
     "@types/node": "^14.14.9",
+    "emoji-regex": "^10.2.1",
     "googleapis": "^105.0.0",
     "mocha": "^10.2.0",
     "moment": "^2.29.1",
     "obsidian": "0.15",
     "rollup": "^2.33.3",
-    "rollup-plugin-svelte": "^6.1.1",
-    "svelte": "^3.57.0",
-    "svelte-select": "^3.14.1",
     "tslib": "^2.0.3"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.14",
+    "chai": "^4.2.0",
+    "obsidian": "latest",
+    "prettier": "^2.2.0",
+    "rollup-plugin-copy": "^3.3.0",
+    "rollup-plugin-typescript2": "^0.34.1",
+    "rollup-plugin-web-worker-loader": "^1.6.1",
+    "ts-node": "^9.0.0",
+    "ttypescript": "^1.5.15"
   }
 }

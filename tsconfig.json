@@ -1,16 +1,23 @@
 {
-  "extends": "@tsconfig/svelte/tsconfig.json",
   "include": [
     "src/**/*"
   ],
   "exclude": [
-    "node_modules/*"
+    "lib/**/*"
   ],
   "compilerOptions": {
+    "baseUrl": "src",
+    "module": "ESNext",
+    "target": "es2018",
+    "allowJs": false,
+    "jsx": "react",
+    "jsxFactory": "h",
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "downlevelIteration": true,
     "esModuleInterop": true,
     "types": [
       "node",
-      "svelte"
     ]
   },
 }
