@@ -5,20 +5,29 @@
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"build": "node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "MIT",
 	"devDependencies": {
+		"@tsconfig/svelte": "^3.0.0",
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
 		"esbuild": "0.17.3",
+		"esbuild-svelte": "^0.7.3",
 		"obsidian": "latest",
+		"svelte": "^3.57.0",
+		"svelte-preprocess": "^5.0.3",
 		"tslib": "2.4.0",
 		"typescript": "4.7.4"
+	},
+	"dependencies": {
+		"@google-cloud/local-auth": "^2.1.0",
+		"async-mutex": "^0.4.0",
+		"googleapis": "^105.0.0"
 	}
 }

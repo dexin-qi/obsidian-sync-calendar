@@ -1,5 +1,5 @@
 # Obsidian Sample Plugin
-
+thanks to the brilliant plugins obsidian-todoist %% <a herf=""> %%
 This is a sample plugin for Obsidian (https://obsidian.md).
 
 This project uses Typescript to provide type checking and documentation.
