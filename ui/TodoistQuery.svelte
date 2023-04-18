@@ -1,15 +1,16 @@
 <script lang="ts">
-	// import type { App } from "obsidian";
 	import type SyncCalendarPlugin from "main";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
 	import type { Todo } from "TodoSerialization/Todo";
 
 	import { onMount, onDestroy } from "svelte";
-	// import { Result } from "../utils/result";
 
-	// import ErrorDisplay from "./ErrorDisplay.svelte";
+	import ErrorDisplay from "./ErrorDisplay.svelte";
 	import TaskList from "./TaskList.svelte";
 	import NoTaskDisplay from "./NoTaskDisplay.svelte";
+	import { rejects } from "assert";
+	import { resolve } from "path";
+	import { apiVersion } from "obsidian";
 
 	export let plugin: SyncCalendarPlugin;
 	export let api: GoogleCalendarSync;
@@ -17,7 +18,9 @@
 	let fetching = false;
 	let eventsList: Todo[] = [];
 
-	let autoRefreshIntervalId: number = null;
+	let autoRefreshIntervalId: null | number = null;
+
+	let error_info: null | Error = null;
 	let fetchedOnce = false;
 	let refreshTimes = 1;
 	let eventsListTitle = "TODOs in Calendar";
@@ -26,7 +29,7 @@
 		if (autoRefreshIntervalId == null) {
 			autoRefreshIntervalId = window.setInterval(async () => {
 				await fetchTodos();
-			}, 8000);
+			}, 10000);
 		}
 	}
 
@@ -41,34 +44,53 @@
 	});
 
 	async function fetchTodos() {
-		if (fetching) {
+		const apiIsReady = await api.isReady();
+		if (!apiIsReady) {
 			return;
 		}
 
+		if (fetching) {
+			return;
+		}
 		fetching = true;
+		plugin.syncStatusItem.setText("Sync: 🔽");
 
-		plugin.syncStatusItem.setText("Fetching from Calendar...");
-
-		const fetchPromise = api.fetchTodos(200).then((newEventsList) => {
-			eventsList = newEventsList;
-			console.info(`Fetched success: ${eventsList.length} events`);
-			plugin.syncStatusItem.setText("Fetch over!");
-			fetchedOnce = true;
-		});
+		const fetchPromise = api
+			.fetchTodos(200)
+			.then((newEventsList) => {
+				eventsList = newEventsList;
+				fetchedOnce = true;
+				plugin.syncStatusItem.setText("Sync: 🔵");
+				console.info(`Fetched success: ${eventsList.length} events`);
+			})
+			.catch((err) => {
+				throw new Error(
+					"Connection failed, \
+          cannot fetch events from Google calendar."
+				);
+			});
 
 		const timeoutPromise = new Promise((resolve, reject) => {
 			setTimeout(() => {
-				reject(new Error("Fetch timed out"));
+				reject(
+					new Error(
+						"Fetch from Google calendar timeout! \
+            Check your connection and proxy settings, \
+            then restart Obsidian."
+					)
+				);
 			}, 4000);
 		});
 
 		await Promise.race([fetchPromise, timeoutPromise])
 			.then(() => {
 				fetching = false;
+				error_info = null;
 			})
-			.catch((error) => {
-				console.error("Fetching events failed:", error);
+			.catch((err) => {
 				fetching = false;
+				error_info = err;
+				plugin.syncStatusItem.setText("Sync: 🔴");
 			});
 	}
 </script>
@@ -85,8 +107,10 @@
 		<TaskList todoList={eventsList} />
 	{/if}
 {/if}
+{#if error_info !== null}
+	<ErrorDisplay error={error_info} />
+{/if}
 
-<!-- <br /> -->
 <button
 	class="todoist-refresh-button"
 	on:click={async () => {
@@ -109,5 +133,3 @@
 		/>
 	</svg>
 </button>
-
-<!-- <ErrorDisplay error={tasks.unwrapErr()} /> -->

@@ -3,6 +3,7 @@ import { authenticate } from '@google-cloud/local-auth';
 import { google } from 'googleapis';
 
 import { Todo } from 'TodoSerialization/Todo';
+import { rejects } from 'assert';
 
 
 const path = require('path');
@@ -33,6 +34,9 @@ export default class GoogleCalendarSync {
   async fetchTodos(max_results = 20): Promise<Todo[]> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
+
+    let eventsMetaList: any[] | undefined = undefined;
+
     const eventsListQueryResult = await calendar.events.list({
       calendarId: 'primary',
       timeMin: new Date().toISOString(),
@@ -40,11 +44,12 @@ export default class GoogleCalendarSync {
       singleEvents: true,
       orderBy: 'startTime',
     });
+    eventsMetaList = eventsListQueryResult.data.items;
 
     // CalUID 和 id 的区别: 在重复发生的事件中，
     // 每个事件有不同的 id，但是共享相同的icalUID
     // window.moment().format('YYYY-MM-DD[T]HH:mm:ssZ')
-    const eventsMetaList = eventsListQueryResult.data.items;
+    // const eventsMetaList = eventsListQueryResult.data.items;
 
     let eventsList: Todo[] = [];
     if (eventsMetaList != undefined) {
@@ -181,6 +186,14 @@ export default class GoogleCalendarSync {
     });
   }
 
+  async isReady(): Promise<boolean> {
+    const client = await this.loadSavedCredentialsIfExist();
+    if (client) {
+      return true;
+    }
+    return false;
+  }
+
   /**
   * Reads previously authorized credentials from the save file.
   *
@@ -222,7 +235,7 @@ export default class GoogleCalendarSync {
    *
    */
   public async authorize() {
-    let client = await this.loadSavedCredentialsIfExist();
+    let client = await this.loadSavedCredentialsIfExist()
     if (client) {
       return client;
     }
@@ -233,7 +246,8 @@ export default class GoogleCalendarSync {
     client = await authenticate({
       scopes: this.SCOPES,
       keyfilePath: KEY_FILE,
-    });
+    }).catch(err => { throw err; });
+
     if (client.credentials) {
       await this.saveCredentials(client);
     }
