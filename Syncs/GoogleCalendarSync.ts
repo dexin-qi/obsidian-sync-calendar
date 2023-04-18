@@ -186,6 +186,14 @@ export default class GoogleCalendarSync {
     });
   }
 
+  async isReady(): Promise<boolean> {
+    const client = await this.loadSavedCredentialsIfExist();
+    if (client) {
+      return true;
+    }
+    return false;
+  }
+
   /**
   * Reads previously authorized credentials from the save file.
   *
@@ -238,7 +246,7 @@ export default class GoogleCalendarSync {
     client = await authenticate({
       scopes: this.SCOPES,
       keyfilePath: KEY_FILE,
-    }).catch(err => { return err; });
+    }).catch(err => { throw err; });
 
     if (client.credentials) {
       await this.saveCredentials(client);

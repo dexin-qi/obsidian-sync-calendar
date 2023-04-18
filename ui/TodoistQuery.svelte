@@ -10,6 +10,7 @@
 	import NoTaskDisplay from "./NoTaskDisplay.svelte";
 	import { rejects } from "assert";
 	import { resolve } from "path";
+	import { apiVersion } from "obsidian";
 
 	export let plugin: SyncCalendarPlugin;
 	export let api: GoogleCalendarSync;
@@ -43,11 +44,15 @@
 	});
 
 	async function fetchTodos() {
+		const apiIsReady = await api.isReady();
+		if (!apiIsReady) {
+			return;
+		}
+
 		if (fetching) {
 			return;
 		}
 		fetching = true;
-
 		plugin.syncStatusItem.setText("Sync: 🔽");
 
 		const fetchPromise = api
