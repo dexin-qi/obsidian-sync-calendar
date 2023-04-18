@@ -1,4 +1,6 @@
+import axios from 'axios';
 import { App, type PluginManifest, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+
 import type { Todo } from 'TodoSerialization/Todo';
 import { TodosEvents } from 'TodoSerialization/TodoEvents';
 import { Cache, State } from 'TodoSerialization/Cache';
@@ -9,16 +11,23 @@ import QueryInjector from 'Injector/QueryInjector';
 
 // Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
-  mySetting: string;
+interface SyncCalendarPluginSettings {
+  proxy_enabled: boolean;
+  proxy_host: string;
+  proxy_port: number;
+  proxy_protocol: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-  mySetting: 'default'
+const DEFAULT_SETTINGS: SyncCalendarPluginSettings = {
+  proxy_enabled: false,
+  proxy_host: '127.0.0.1',
+  proxy_port: 20171,
+  proxy_protocol: 'http',
 }
 
-export default class MyPlugin extends Plugin {
-  public settings: MyPluginSettings;
+
+export default class SyncCalendarPlugin extends Plugin {
+  public settings: SyncCalendarPluginSettings;
 
   private cache: Cache | undefined;
   private calendarSync: GoogleCalendarSync;
@@ -40,7 +49,7 @@ export default class MyPlugin extends Plugin {
 
     await this.loadSettings();
     // This adds a settings tab so the user can configure various aspects of the plugin
-    this.addSettingTab(new SampleSettingTab(this.app, this));
+    this.addSettingTab(new SyncCalendarPluginSettingTab(this.app, this));
 
     const events = new TodosEvents({ obsidianEvents: this.app.workspace });
     this.cache = new Cache({
@@ -185,50 +194,6 @@ export default class MyPlugin extends Plugin {
       }
     });
 
-    // This adds a simple command that can be triggered anywhere
-    this.addCommand({
-      id: 'open-sample-modal-simple',
-      name: 'Open sample modal (simple)',
-      callback: () => {
-        new SampleModal(this.app).open();
-      }
-    });
-    // This adds an editor command that can perform some operation on the current editor instance
-    this.addCommand({
-      id: 'sample-editor-command',
-      name: 'Sample editor command',
-      editorCallback: (editor: Editor, view: MarkdownView) => {
-        console.log(editor.getSelection());
-        editor.replaceSelection('Sample Editor Command');
-      }
-    });
-    // This adds a complex command that can check whether the current state of the app allows execution of the command
-    this.addCommand({
-      id: 'open-sample-modal-complex',
-      name: 'Open sample modal (complex)',
-      checkCallback: (checking: boolean) => {
-        // Conditions to check
-        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (markdownView) {
-          // If checking is true, we're simply "checking" if the command can be run.
-          // If checking is false, then we want to actually perform the operation.
-          if (!checking) {
-            new SampleModal(this.app).open();
-          }
-
-          // This command will only show up in Command Palette when the check function returns true
-          return true;
-        }
-      }
-    });
-
-
-    // // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-    // // Using this function will automatically remove the event listener when this plugin is disabled.
-    // this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-    //   console.log('click', evt);
-    // });
-
     // // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
     // this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
   }
@@ -252,26 +217,14 @@ export default class MyPlugin extends Plugin {
   }
 }
 
-class SampleModal extends Modal {
-  constructor(app: App) {
-    super(app);
-  }
+class SyncCalendarPluginSettingTab extends PluginSettingTab {
+  plugin: SyncCalendarPlugin;
+  proxyEnabledCheckbox: HTMLInputElement;
+  protocolSelect: HTMLSelectElement;
+  hostInput: HTMLInputElement;
+  portInput: HTMLInputElement;
 
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.setText('Woah!');
-  }
-
-  onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
-  }
-}
-
-class SampleSettingTab extends PluginSettingTab {
-  plugin: MyPlugin;
-
-  constructor(app: App, plugin: MyPlugin) {
+  constructor(app: App, plugin: SyncCalendarPlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
@@ -281,18 +234,89 @@ class SampleSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'Settings for my awesome plugin.' });
+    containerEl.createEl("h3", { text: "Proxy Settings" });
 
-    new Setting(containerEl)
-      .setName('Setting #1')
-      .setDesc('It\'s a secret')
-      .addText(text => text
-        .setPlaceholder('Enter your secret')
-        .setValue(this.plugin.settings.mySetting)
-        .onChange(async (value) => {
-          console.log('Secret: ' + value);
-          this.plugin.settings.mySetting = value;
-          await this.plugin.saveSettings();
-        }));
+    // Proxy enabled checkbox
+    this.proxyEnabledCheckbox = new Setting(containerEl)
+      .setName("Enable Proxy")
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.proxy_enabled)
+          .onChange(async (value) => {
+            this.plugin.settings.proxy_enabled = value;
+            this.toggleProxySettings(value);
+            await this.plugin.saveSettings();
+          })
+      )
+      .controlEl.querySelector("input");
+
+    // Protocol type selector
+    this.protocolSelect = new Setting(containerEl)
+      .setName("Protocol Type")
+      .addDropdown(dropdown =>
+        dropdown
+          .addOption("http", "HTTP")
+          .addOption("https", "HTTPS")
+          .addOption("socks5", "SOCKS5")
+          .setValue(this.plugin.settings.proxy_protocol)
+          .onChange(async (value) => {
+            this.plugin.settings.proxy_protocol = value;
+            await this.plugin.saveSettings();
+          })
+      )
+      .controlEl.querySelector("select");
+
+    // Proxy server address input
+    this.hostInput = new Setting(containerEl)
+      .setName("Server Address")
+      .setDesc("Enter the IP address or hostname of the proxy server")
+      .addText(text =>
+        text
+          .setValue(this.plugin.settings.proxy_host)
+          .onChange(async (value) => {
+            this.plugin.settings.proxy_host = value;
+            await this.plugin.saveSettings();
+          })
+      )
+      .controlEl.querySelector("input");
+
+    // Proxy server port input
+    this.portInput = new Setting(containerEl)
+      .setName("Server Port")
+      .setDesc("Enter the port number used by the proxy server")
+      .addText(text =>
+        text
+          .setValue(this.plugin.settings.proxy_port.toString())
+          .onChange(async (value) => {
+            const port = parseInt(value);
+            if (!isNaN(port)) {
+              this.plugin.settings.proxy_port = port;
+              await this.plugin.saveSettings();
+            }
+          })
+      )
+      .controlEl.querySelector("input");
+
+    // Hide or show the protocol type selector, address input, and port input based on whether the proxy is enabled
+    this.toggleProxySettings(this.plugin.settings.proxy_enabled);
+
+  }
+
+  toggleProxySettings(enabled: boolean) {
+    this.protocolSelect.disabled = !enabled;
+    this.hostInput.disabled = !enabled;
+    this.portInput.disabled = !enabled;
+
+    if (enabled) {
+      axios.defaults.proxy = {
+        host: this.hostInput.value,
+        port: parseInt(this.portInput.value),
+        protocol: this.protocolSelect.value,
+      };
+      console.log("Proxy protocol: " + axios.defaults.proxy.protocol);
+      console.log("Proxy host: " + axios.defaults.proxy.host);
+      console.log("Proxy port: " + axios.defaults.proxy.port);
+    } else {
+      axios.defaults.proxy = false;
+    }
   }
 }
