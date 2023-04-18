@@ -77,6 +77,7 @@ export default class SyncCalendarPlugin extends Plugin {
 
     // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
     this.syncStatusItem = this.addStatusBarItem();
+    this.syncStatusItem.setText("Sync: 🟠");
 
     this.calendarSync = new GoogleCalendarSync(this.app.vault);
     this.obsidianSync = new ObsidianTasksSync(this.app);
@@ -112,7 +113,7 @@ export default class SyncCalendarPlugin extends Plugin {
   }
 
   private async syncWithCalendar() {
-    this.syncStatusItem.setText('Sync With Calendar...');
+    this.syncStatusItem.setText('Sync: 🔄');
 
     let obsidianTodos = this.obsidianSync.fetchTodos();
     let obsidianTodosBlockIds: string[] = [];
@@ -216,7 +217,7 @@ export default class SyncCalendarPlugin extends Plugin {
       eventDescs.push('Sync Result: no update');
     }
 
-    this.syncStatusItem.setText('Sync Done!');
+    this.syncStatusItem.setText('Sync: 🟢');
 
     // new SyncResultModal(this.app, eventDescs).open();
     new Notice(eventDescs.join('\n'));
