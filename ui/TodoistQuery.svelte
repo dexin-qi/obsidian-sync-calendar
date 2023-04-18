@@ -28,13 +28,13 @@
 	$: {
 		if (autoRefreshIntervalId == null) {
 			autoRefreshIntervalId = window.setInterval(async () => {
-				await fetchTodos();
+				await fetchEventLists();
 			}, 10000);
 		}
 	}
 
 	onMount(async () => {
-		await fetchTodos();
+		await fetchEventLists();
 	});
 
 	onDestroy(() => {
@@ -43,7 +43,7 @@
 		}
 	});
 
-	async function fetchTodos() {
+	async function fetchEventLists() {
 		const apiIsReady = await api.isReady();
 		if (!apiIsReady) {
 			return;
@@ -54,9 +54,12 @@
 		}
 		fetching = true;
 		plugin.syncStatusItem.setText("Sync: 🔽");
-
+    
 		const fetchPromise = api
-			.fetchTodos(200)
+			.fetchTodos(
+        plugin.settings.fetchWeeksAgo,
+        plugin.settings.fetchMaximumEvents
+      )
 			.then((newEventsList) => {
 				eventsList = newEventsList;
 				fetchedOnce = true;
@@ -114,7 +117,7 @@
 <button
 	class="todoist-refresh-button"
 	on:click={async () => {
-		await fetchTodos();
+		await fetchEventLists();
 	}}
 	disabled={fetching}
 >

@@ -31,15 +31,19 @@ export default class GoogleCalendarSync {
   }
 
 
-  async fetchTodos(max_results = 20): Promise<Todo[]> {
+  async fetchTodos(numberWeeksAgo: number = 4, max_results: number = 20): Promise<Todo[]> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
 
     let eventsMetaList: any[] | undefined = undefined;
 
+    const weeksAgo = window.moment.duration(numberWeeksAgo, "weeks");
+    const startMoment = window.moment().startOf('day').subtract(weeksAgo);
+    console.log(startMoment.toISOString());
+
     const eventsListQueryResult = await calendar.events.list({
       calendarId: 'primary',
-      timeMin: new Date().toISOString(),
+      timeMin: startMoment.toISOString(),
       maxResults: max_results,
       singleEvents: true,
       orderBy: 'startTime',

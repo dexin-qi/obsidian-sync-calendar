@@ -1,6 +1,5 @@
 import { App, TFile, Notice } from "obsidian";
 
-import moment from "moment";
 import crypto from "crypto";
 
 import { DEFAULT_SYMBOLS } from "TodoSerialization/DefaultSerialization";

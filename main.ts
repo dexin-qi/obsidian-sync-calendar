@@ -1,4 +1,6 @@
 import axios from 'axios';
+import type { Duration } from 'moment';
+
 import { App, type PluginManifest, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 import type { Todo } from 'TodoSerialization/Todo';
@@ -16,6 +18,9 @@ interface SyncCalendarPluginSettings {
   proxy_host: string;
   proxy_port: number;
   proxy_protocol: string;
+
+  fetchWeeksAgo: number;
+  fetchMaximumEvents: number;
 }
 
 const DEFAULT_SETTINGS: SyncCalendarPluginSettings = {
@@ -23,6 +28,9 @@ const DEFAULT_SETTINGS: SyncCalendarPluginSettings = {
   proxy_host: '127.0.0.1',
   proxy_port: 20171,
   proxy_protocol: 'http',
+
+  fetchWeeksAgo: 4,
+  fetchMaximumEvents: 2000,
 }
 
 
@@ -55,9 +63,8 @@ export default class SyncCalendarPlugin extends Plugin {
       console.log("Proxy host: " + axios.defaults.proxy.host);
       console.log("Proxy port: " + axios.defaults.proxy.port);
     } else {
-      console.log("Proxy Not Enabled!");
       axios.defaults.proxy = false;
-      console.log("Proxy: " + axios.defaults.proxy);
+      console.log("Proxy Not Enabled!");
     }
 
     // const events = new TodosEvents({ obsidianEvents: this.app.workspace });
@@ -127,7 +134,10 @@ export default class SyncCalendarPlugin extends Plugin {
       }
     });
 
-    let calendarTodos: Todo[] = await this.calendarSync.fetchTodos();
+    let calendarTodos: Todo[] = await this.calendarSync.fetchTodos(
+      this.settings.fetchWeeksAgo,
+      this.settings.fetchMaximumEvents
+    );
     let calendarTodosBlockIds: string[] = [];
     calendarTodos.map((todo) => {
       if (todo.blockId !== null && todo.blockId !== undefined) {
@@ -329,6 +339,42 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
 
     // Hide or show the protocol type selector, address input, and port input based on whether the proxy is enabled
     this.toggleProxySettings(this.plugin.settings.proxy_enabled);
+
+
+    this.createHeader(
+      "Fetch Settings",
+      "Settings to manage calendar fetch events."
+    );
+
+    new Setting(containerEl)
+      .setName("Weeks Ago")
+      .setDesc("Enter how many weeks ago did you concerned.")
+      .addText(text =>
+        text
+          .setValue(this.plugin.settings.fetchWeeksAgo.toString())
+          .onChange(async (value) => {
+            const weeksAgo = parseInt(value);
+            if (!isNaN(weeksAgo)) {
+              this.plugin.settings.fetchWeeksAgo = weeksAgo;
+            }
+            await this.plugin.saveSettings();
+          })
+      ).controlEl.querySelector("input");
+
+    new Setting(containerEl)
+      .setName("Maximum Events")
+      .setDesc("Enter the maximum number of events in the fetching window")
+      .addText(text =>
+        text
+          .setValue(this.plugin.settings.fetchMaximumEvents.toString())
+          .onChange(async (value) => {
+            const maximumEvents = parseInt(value);
+            if (!isNaN(maximumEvents)) {
+              this.plugin.settings.fetchMaximumEvents = maximumEvents;
+              await this.plugin.saveSettings();
+            }
+          })
+      ).controlEl.querySelector("input");
 
   }
 
