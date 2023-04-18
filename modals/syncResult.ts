@@ -1,6 +1,6 @@
 
 import { App, Modal } from "obsidian";
-import SyncResultContent from "./SyncResult.svelte";
+import SyncResultContent from "./SyncResultSvelte.svelte";
 
 
 export default class SyncResultModal extends Modal {
