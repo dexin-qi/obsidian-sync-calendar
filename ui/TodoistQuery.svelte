@@ -1,5 +1,6 @@
 <script lang="ts">
 	// import type { App } from "obsidian";
+	import type SyncCalendarPlugin from "main";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
 	import type { Todo } from "TodoSerialization/Todo";
 
@@ -10,6 +11,7 @@
 	import TaskList from "./TaskList.svelte";
 	import NoTaskDisplay from "./NoTaskDisplay.svelte";
 
+	export let plugin: SyncCalendarPlugin;
 	export let api: GoogleCalendarSync;
 
 	let fetching = false;
@@ -45,9 +47,12 @@
 
 		fetching = true;
 
+		plugin.syncStatusItem.setText("Fetching from Calendar...");
+
 		const fetchPromise = api.fetchTodos(200).then((newEventsList) => {
 			eventsList = newEventsList;
 			console.info(`Fetched success: ${eventsList.length} events`);
+			plugin.syncStatusItem.setText("Fetch over!");
 			fetchedOnce = true;
 		});
 

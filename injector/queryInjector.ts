@@ -4,6 +4,8 @@ import {
   MarkdownRenderChild,
 } from "obsidian";
 
+import SyncCalendarPlugin from "main";
+
 import GoogleCalendarSync from "../Syncs/GoogleCalendarSync";
 
 import TodoistQuery from "../ui/TodoistQuery.svelte";
@@ -15,9 +17,11 @@ export default class QueryInjector {
   private app: App;
   private pendingQueries: PendingQuery[];
 
+  private plugin: SyncCalendarPlugin;
   private calendarSync: GoogleCalendarSync;
 
-  constructor(app: App) {
+  constructor(plugin: SyncCalendarPlugin, app: App) {
+    this.plugin = plugin;
     this.app = app;
     this.pendingQueries = [];
   }
@@ -50,33 +54,15 @@ export default class QueryInjector {
   }
 
   injectQuery(pendingQuery: PendingQuery) {
-
-
-
-    //   query = parseQuery(JSON.parse(pendingQuery.source));
-    // } catch(e) {
-    //   query = Result.Err(new Error(`Query was not valid JSON: ${e.message}.`));
-    // }
-
     const child = new InjectedQuery(pendingQuery.target, (root: HTMLElement) => {
-      // if (query.isOk()) {
       return new TodoistQuery({
         target: root,
         props: {
-          // query: null,
-
+          plugin: this.plugin,
           api: this.calendarSync,
 
         },
       });
-      // } else {
-      // return new ErrorDisplay({
-      //   target: root,
-      //   props: {
-      //     error: new Error("Called 'unwrapErr' on a Result with a value."),
-      //   },
-      // });
-      // }
     });
 
     pendingQuery.ctx.addChild(child);

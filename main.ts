@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS: SyncCalendarPluginSettings = {
 
 export default class SyncCalendarPlugin extends Plugin {
   public settings: SyncCalendarPluginSettings;
+  public syncStatusItem: HTMLElement;
 
   private cache: Cache | undefined;
   private calendarSync: GoogleCalendarSync;
@@ -37,27 +38,35 @@ export default class SyncCalendarPlugin extends Plugin {
 
   constructor(app: App, pluginManifest: PluginManifest) {
     super(app, pluginManifest);
-
-    this.queryInjector = new QueryInjector(app);
   }
 
   async onload() {
-
-    this.registerMarkdownCodeBlockProcessor("calendar-sync",
-      this.queryInjector.onNewBlock.bind(this.queryInjector)
-    );
-
     await this.loadSettings();
-    // This adds a settings tab so the user can configure various aspects of the plugin
+
     this.addSettingTab(new SyncCalendarPluginSettingTab(this.app, this));
 
-    const events = new TodosEvents({ obsidianEvents: this.app.workspace });
-    this.cache = new Cache({
-      app: this.app,
-      metadataCache: this.app.metadataCache,
-      vault: this.app.vault,
-      events,
-    });
+    if (this.settings.proxy_enabled) {
+      axios.defaults.proxy = {
+        host: this.settings.proxy_host,
+        port: this.settings.proxy_port,
+        protocol: this.settings.proxy_protocol,
+      };
+      console.log("Proxy protocol: " + axios.defaults.proxy.protocol);
+      console.log("Proxy host: " + axios.defaults.proxy.host);
+      console.log("Proxy port: " + axios.defaults.proxy.port);
+    } else {
+      console.log("Proxy Not Enabled!");
+      axios.defaults.proxy = false;
+      console.log("Proxy: " + axios.defaults.proxy);
+    }
+
+    // const events = new TodosEvents({ obsidianEvents: this.app.workspace });
+    // this.cache = new Cache({
+    //   app: this.app,
+    //   metadataCache: this.app.metadataCache,
+    //   vault: this.app.vault,
+    //   events,
+    // });
 
     // this.app.plugins..registerEvent(plugin.app.metadataCache.on("dataview:metadata-change",
     // ));
@@ -66,131 +75,31 @@ export default class SyncCalendarPlugin extends Plugin {
     //   console.log("!!! Dateview is ready, dexin has receive callback!!!");
     // });
 
-    // // This creates an icon in the left ribbon.
-    // const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-    //   // Called when the user clicks the icon.
-    //   new Notice('This is a notice!');
-    // });
-    // // Perform additional things with the ribbon
-    // ribbonIconEl.addClass('my-plugin-ribbon-class');
-
     // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-    const statusBarItemEl = this.addStatusBarItem();
-    statusBarItemEl.setText('Status Bar Text');
+    this.syncStatusItem = this.addStatusBarItem();
 
     this.calendarSync = new GoogleCalendarSync(this.app.vault);
     this.obsidianSync = new ObsidianTasksSync(this.app);
 
+    this.queryInjector = new QueryInjector(this, this.app);
     this.queryInjector.setCalendarSync(this.calendarSync);
 
+    this.registerMarkdownCodeBlockProcessor("calendar-sync",
+      this.queryInjector.onNewBlock.bind(this.queryInjector)
+    );
+
+    // Add Ribbons
+    const ribbonIconEl = this.addRibbonIcon('sync', 'Sync With Calendar', async (evt: MouseEvent) => {
+      this.syncWithCalendar();
+    });
+    ribbonIconEl.addClass('my-plugin-ribbon-class');
+
+    // Add Commands
     this.addCommand({
       id: 'sync-with-calendar',
       name: 'Sync With Calendar',
       callback: async () => {
-        let obsidianTodos = this.obsidianSync.fetchTodos();
-        let obsidianTodosBlockIds: string[] = [];
-        if (obsidianTodos instanceof Error) {
-          new Notice("Error on fetch Obsidain tasks");
-          return;
-        }
-        obsidianTodos.map((todo) => {
-          if (todo.blockId !== null && todo.blockId !== undefined) {
-            obsidianTodosBlockIds.push(todo.blockId);
-          }
-        });
-
-        let calendarTodos: Todo[] = await this.calendarSync.fetchTodos();
-        let calendarTodosBlockIds: string[] = [];
-        calendarTodos.map((todo) => {
-          if (todo.blockId !== null && todo.blockId !== undefined) {
-            calendarTodosBlockIds.push(todo.blockId);
-          }
-        });
-
-        let newCalendarTodos: Todo[] = [];
-        let updateCalendarTodos: Todo[] = [];
-        let newObsidianTodos: Todo[] = [];
-        let updateObsidianTodos: Todo[] = [];
-
-        // debugger
-        obsidianTodos.map((todo: Todo) => {
-          if (todo.blockId === null || todo.blockId === undefined) {
-            console.error(`${todo.content} does not have a blockId`);
-            return;
-          }
-          if (calendarTodosBlockIds.indexOf(todo.blockId) > -1) {
-            updateCalendarTodos.push(todo);
-          } else {
-            newCalendarTodos.push(todo);
-          }
-        });
-
-        calendarTodos.map((todo: Todo) => {
-          if (todo.blockId === null || todo.blockId === undefined) {
-            console.log(`${todo.content} was creat outside of Obsidian`);
-            newObsidianTodos.push(todo);
-            return;
-          }
-          if (calendarTodosBlockIds.indexOf(todo.blockId) > -1) {
-            updateObsidianTodos.push(todo);
-          } else {
-            newObsidianTodos.push(todo);
-          }
-        });
-
-        let eventDescs: string[] = [];
-
-        // V1.0: I trust Calendar meta more.
-        // 先抓取全部 events in Calendar
-        // 再抓取全部 [valid] tasks in Obsidian
-        // 如果不同则修改 Obsidian 
-
-        // Obsidian --{+}-> Calendar
-        await this.calendarSync.pushTodos(newCalendarTodos);
-
-        if (newCalendarTodos.length > 0) {
-          eventDescs.push(`${(newCalendarTodos.length)} event(s) add to Calendar`);
-          newCalendarTodos.map((todo: Todo, i) => {
-            eventDescs.push(`\t${i}. ${todo.content}`);
-          });
-        }
-
-        // TODO: Obsidian --{m}-> Calendar 
-        // this.calendarSync.updateTodos(updateCalendarTodos);
-
-        if (updateCalendarTodos.length > 0) {
-          eventDescs.push(`${(updateCalendarTodos.length)} event(s) updated to Calendar`);
-          updateCalendarTodos.map((todo: Todo, i) => {
-            eventDescs.push(`\t${i}. ${todo.content}`);
-          });
-        }
-
-        // Obsidian <-{m}-- Calendar
-        this.obsidianSync.updateTodos(obsidianTodos, updateObsidianTodos);
-
-        if (updateObsidianTodos.length > 0) {
-          eventDescs.push(`${(updateObsidianTodos.length)} event(s) updated to Obsidian`);
-          updateObsidianTodos.map((todo: Todo, i) => {
-            eventDescs.push(`\t${i}. ${todo.content}`);
-          });
-        }
-
-        // TODO: Obsidian <-{+}-- Calendar
-        // this.obsidianSync.pushTodos(newObsidianTodos);
-
-        // if (newObsidianTodos.length > 0) {
-        //   eventDescs.push(`${(newObsidianTodos.length)} event(s) add to Obsidian`);
-        //   newObsidianTodos.map((todo: Todo, i) => {
-        //     eventDescs.push(`\t${i}. ${todo.content}`);
-        //   });
-        // }
-
-        if (eventDescs.length == 0) {
-          eventDescs.push('Sync Result: no update');
-        }
-
-        // new SyncResultModal(this.app, eventDescs).open();
-        new Notice(eventDescs.join('\n'));
+        this.syncWithCalendar();
       }
     });
 
@@ -200,6 +109,117 @@ export default class SyncCalendarPlugin extends Plugin {
 
   onunload() {
 
+  }
+
+  private async syncWithCalendar() {
+    this.syncStatusItem.setText('Sync With Calendar...');
+
+    let obsidianTodos = this.obsidianSync.fetchTodos();
+    let obsidianTodosBlockIds: string[] = [];
+    if (obsidianTodos instanceof Error) {
+      new Notice("Error on fetch Obsidain tasks");
+      return;
+    }
+    obsidianTodos.map((todo) => {
+      if (todo.blockId !== null && todo.blockId !== undefined) {
+        obsidianTodosBlockIds.push(todo.blockId);
+      }
+    });
+
+    let calendarTodos: Todo[] = await this.calendarSync.fetchTodos();
+    let calendarTodosBlockIds: string[] = [];
+    calendarTodos.map((todo) => {
+      if (todo.blockId !== null && todo.blockId !== undefined) {
+        calendarTodosBlockIds.push(todo.blockId);
+      }
+    });
+
+    let newCalendarTodos: Todo[] = [];
+    let updateCalendarTodos: Todo[] = [];
+    let newObsidianTodos: Todo[] = [];
+    let updateObsidianTodos: Todo[] = [];
+
+    // debugger
+    obsidianTodos.map((todo: Todo) => {
+      if (todo.blockId === null || todo.blockId === undefined) {
+        console.error(`${todo.content} does not have a blockId`);
+        return;
+      }
+      if (calendarTodosBlockIds.indexOf(todo.blockId) > -1) {
+        updateCalendarTodos.push(todo);
+      } else {
+        newCalendarTodos.push(todo);
+      }
+    });
+
+    calendarTodos.map((todo: Todo) => {
+      if (todo.blockId === null || todo.blockId === undefined) {
+        console.log(`${todo.content} was creat outside of Obsidian`);
+        newObsidianTodos.push(todo);
+        return;
+      }
+      if (calendarTodosBlockIds.indexOf(todo.blockId) > -1) {
+        updateObsidianTodos.push(todo);
+      } else {
+        newObsidianTodos.push(todo);
+      }
+    });
+
+    let eventDescs: string[] = [];
+
+    // V1.0: I trust Calendar meta more.
+    // 先抓取全部 events in Calendar
+    // 再抓取全部 [valid] tasks in Obsidian
+    // 如果不同则修改 Obsidian 
+
+    // Obsidian --{+}-> Calendar
+    await this.calendarSync.pushTodos(newCalendarTodos);
+
+    if (newCalendarTodos.length > 0) {
+      eventDescs.push(`${(newCalendarTodos.length)} event(s) add to Calendar`);
+      newCalendarTodos.map((todo: Todo, i) => {
+        eventDescs.push(`\t${i}. ${todo.content}`);
+      });
+    }
+
+    // TODO: Obsidian --{m}-> Calendar 
+    // this.calendarSync.updateTodos(updateCalendarTodos);
+
+    if (updateCalendarTodos.length > 0) {
+      eventDescs.push(`${(updateCalendarTodos.length)} event(s) updated to Calendar`);
+      updateCalendarTodos.map((todo: Todo, i) => {
+        eventDescs.push(`\t${i}. ${todo.content}`);
+      });
+    }
+
+    // Obsidian <-{m}-- Calendar
+    this.obsidianSync.updateTodos(obsidianTodos, updateObsidianTodos);
+
+    if (updateObsidianTodos.length > 0) {
+      eventDescs.push(`${(updateObsidianTodos.length)} event(s) updated to Obsidian`);
+      updateObsidianTodos.map((todo: Todo, i) => {
+        eventDescs.push(`\t${i}. ${todo.content}`);
+      });
+    }
+
+    // TODO: Obsidian <-{+}-- Calendar
+    // this.obsidianSync.pushTodos(newObsidianTodos);
+
+    // if (newObsidianTodos.length > 0) {
+    //   eventDescs.push(`${(newObsidianTodos.length)} event(s) add to Obsidian`);
+    //   newObsidianTodos.map((todo: Todo, i) => {
+    //     eventDescs.push(`\t${i}. ${todo.content}`);
+    //   });
+    // }
+
+    if (eventDescs.length == 0) {
+      eventDescs.push('Sync Result: no update');
+    }
+
+    this.syncStatusItem.setText('Sync Done!');
+
+    // new SyncResultModal(this.app, eventDescs).open();
+    new Notice(eventDescs.join('\n'));
   }
 
   private onRequestCacheUpdate({ todos, state }: { todos: Todo[], state: State }) {
@@ -234,11 +254,21 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl("h3", { text: "Proxy Settings" });
+    this.createHeader(
+      "SyncCalendar",
+      "Sync Google calendar 📆 events with your Obsidian notes."
+    );
+
+    this.createHeader(
+      "Proxy Settings",
+      "The Proxy Settings to use when syncing with calendar. \u26A0\ufe0fYou will need to RESTART Obsidian after setting this! \u26A0\ufe0f"
+    );
+
 
     // Proxy enabled checkbox
     this.proxyEnabledCheckbox = new Setting(containerEl)
       .setName("Enable Proxy")
+      // .setDesc(desc)
       .addToggle(toggle =>
         toggle.setValue(this.plugin.settings.proxy_enabled)
           .onChange(async (value) => {
@@ -305,18 +335,14 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
     this.protocolSelect.disabled = !enabled;
     this.hostInput.disabled = !enabled;
     this.portInput.disabled = !enabled;
+  }
 
-    if (enabled) {
-      axios.defaults.proxy = {
-        host: this.hostInput.value,
-        port: parseInt(this.portInput.value),
-        protocol: this.protocolSelect.value,
-      };
-      console.log("Proxy protocol: " + axios.defaults.proxy.protocol);
-      console.log("Proxy host: " + axios.defaults.proxy.host);
-      console.log("Proxy port: " + axios.defaults.proxy.port);
-    } else {
-      axios.defaults.proxy = false;
+  private createHeader(header_title: string, header_desc: string | null = null) {
+    // this.containerEl.createEl('h3', { text: "hello" });
+    const header = this.containerEl.createDiv();
+    header.createEl('p', { text: header_title, cls: 'sync-calendar-setting-header-title' });
+    if (header_desc) {
+      header.createEl('p', { text: header_desc, cls: 'sync-calendar-setting-header-description' });
     }
   }
 }
