@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS: SyncCalendarPluginSettings = {
 
 export default class SyncCalendarPlugin extends Plugin {
   public settings: SyncCalendarPluginSettings;
+  public syncStatusItem: HTMLElement;
 
   private cache: Cache | undefined;
   private calendarSync: GoogleCalendarSync;
@@ -37,15 +38,11 @@ export default class SyncCalendarPlugin extends Plugin {
 
   constructor(app: App, pluginManifest: PluginManifest) {
     super(app, pluginManifest);
-
-    this.queryInjector = new QueryInjector(app);
   }
 
   async onload() {
 
-    this.registerMarkdownCodeBlockProcessor("calendar-sync",
-      this.queryInjector.onNewBlock.bind(this.queryInjector)
-    );
+
 
     await this.loadSettings();
     // This adds a settings tab so the user can configure various aspects of the plugin
@@ -67,13 +64,18 @@ export default class SyncCalendarPlugin extends Plugin {
     // });
 
     // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-    // const statusBarItemEl = this.addStatusBarItem();
-    // statusBarItemEl.setText('Status Bar Text');
+    this.syncStatusItem = this.addStatusBarItem();
 
     this.calendarSync = new GoogleCalendarSync(this.app.vault);
     this.obsidianSync = new ObsidianTasksSync(this.app);
 
+    this.queryInjector = new QueryInjector(this, this.app);
     this.queryInjector.setCalendarSync(this.calendarSync);
+
+    this.registerMarkdownCodeBlockProcessor("calendar-sync",
+      this.queryInjector.onNewBlock.bind(this.queryInjector)
+    );
+
 
     const ribbonIconEl = this.addRibbonIcon('sync', 'Sync With Calendar', async (evt: MouseEvent) => {
       this.syncWithCalendar();
@@ -97,6 +99,8 @@ export default class SyncCalendarPlugin extends Plugin {
   }
 
   private async syncWithCalendar() {
+    this.syncStatusItem.setText('Sync With Calendar...');
+
     let obsidianTodos = this.obsidianSync.fetchTodos();
     let obsidianTodosBlockIds: string[] = [];
     if (obsidianTodos instanceof Error) {
@@ -198,6 +202,8 @@ export default class SyncCalendarPlugin extends Plugin {
     if (eventDescs.length == 0) {
       eventDescs.push('Sync Result: no update');
     }
+
+    this.syncStatusItem.setText('Sync Done!');
 
     // new SyncResultModal(this.app, eventDescs).open();
     new Notice(eventDescs.join('\n'));
