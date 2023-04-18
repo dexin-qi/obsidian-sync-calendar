@@ -1,4 +1,6 @@
+import axios from 'axios';
 import { App, type PluginManifest, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+
 import type { Todo } from 'TodoSerialization/Todo';
 import { TodosEvents } from 'TodoSerialization/TodoEvents';
 import { Cache, State } from 'TodoSerialization/Cache';
@@ -303,5 +305,18 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
     this.protocolSelect.disabled = !enabled;
     this.hostInput.disabled = !enabled;
     this.portInput.disabled = !enabled;
+
+    if (enabled) {
+      axios.defaults.proxy = {
+        host: this.hostInput.value,
+        port: parseInt(this.portInput.value),
+        protocol: this.protocolSelect.value,
+      };
+      console.log("Proxy protocol: " + axios.defaults.proxy.protocol);
+      console.log("Proxy host: " + axios.defaults.proxy.host);
+      console.log("Proxy port: " + axios.defaults.proxy.port);
+    } else {
+      axios.defaults.proxy = false;
+    }
   }
 }
