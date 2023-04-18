@@ -41,20 +41,32 @@ export default class SyncCalendarPlugin extends Plugin {
   }
 
   async onload() {
-
-
-
     await this.loadSettings();
-    // This adds a settings tab so the user can configure various aspects of the plugin
+
     this.addSettingTab(new SyncCalendarPluginSettingTab(this.app, this));
 
-    const events = new TodosEvents({ obsidianEvents: this.app.workspace });
-    this.cache = new Cache({
-      app: this.app,
-      metadataCache: this.app.metadataCache,
-      vault: this.app.vault,
-      events,
-    });
+    if (this.settings.proxy_enabled) {
+      axios.defaults.proxy = {
+        host: this.settings.proxy_host,
+        port: this.settings.proxy_port,
+        protocol: this.settings.proxy_protocol,
+      };
+      console.log("Proxy protocol: " + axios.defaults.proxy.protocol);
+      console.log("Proxy host: " + axios.defaults.proxy.host);
+      console.log("Proxy port: " + axios.defaults.proxy.port);
+    } else {
+      console.log("Proxy Not Enabled!");
+      axios.defaults.proxy = false;
+      console.log("Proxy: " + axios.defaults.proxy);
+    }
+
+    // const events = new TodosEvents({ obsidianEvents: this.app.workspace });
+    // this.cache = new Cache({
+    //   app: this.app,
+    //   metadataCache: this.app.metadataCache,
+    //   vault: this.app.vault,
+    //   events,
+    // });
 
     // this.app.plugins..registerEvent(plugin.app.metadataCache.on("dataview:metadata-change",
     // ));
@@ -76,12 +88,13 @@ export default class SyncCalendarPlugin extends Plugin {
       this.queryInjector.onNewBlock.bind(this.queryInjector)
     );
 
-
+    // Add Ribbons
     const ribbonIconEl = this.addRibbonIcon('sync', 'Sync With Calendar', async (evt: MouseEvent) => {
       this.syncWithCalendar();
     });
     ribbonIconEl.addClass('my-plugin-ribbon-class');
 
+    // Add Commands
     this.addCommand({
       id: 'sync-with-calendar',
       name: 'Sync With Calendar',
@@ -241,11 +254,21 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl("h3", { text: "Proxy Settings" });
+    this.createHeader(
+      "SyncCalendar",
+      "Sync Google calendar 📆 events with your Obsidian notes."
+    );
+
+    this.createHeader(
+      "Proxy Settings",
+      "The Proxy Settings to use when syncing with calendar. \u26A0\ufe0fYou will need to RESTART Obsidian after setting this! \u26A0\ufe0f"
+    );
+
 
     // Proxy enabled checkbox
     this.proxyEnabledCheckbox = new Setting(containerEl)
       .setName("Enable Proxy")
+      // .setDesc(desc)
       .addToggle(toggle =>
         toggle.setValue(this.plugin.settings.proxy_enabled)
           .onChange(async (value) => {
@@ -312,18 +335,14 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
     this.protocolSelect.disabled = !enabled;
     this.hostInput.disabled = !enabled;
     this.portInput.disabled = !enabled;
+  }
 
-    if (enabled) {
-      axios.defaults.proxy = {
-        host: this.hostInput.value,
-        port: parseInt(this.portInput.value),
-        protocol: this.protocolSelect.value,
-      };
-      console.log("Proxy protocol: " + axios.defaults.proxy.protocol);
-      console.log("Proxy host: " + axios.defaults.proxy.host);
-      console.log("Proxy port: " + axios.defaults.proxy.port);
-    } else {
-      axios.defaults.proxy = false;
+  private createHeader(header_title: string, header_desc: string | null = null) {
+    // this.containerEl.createEl('h3', { text: "hello" });
+    const header = this.containerEl.createDiv();
+    header.createEl('p', { text: header_title, cls: 'sync-calendar-setting-header-title' });
+    if (header_desc) {
+      header.createEl('p', { text: header_desc, cls: 'sync-calendar-setting-header-description' });
     }
   }
 }
