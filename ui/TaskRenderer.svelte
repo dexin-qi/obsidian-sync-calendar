@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Menu, Notice, MarkdownRenderer } from "obsidian";
-	import SyncCalendarPlugin from "main";
+	import type SyncCalendarPluginSettings from "main";
 	import { onMount } from "svelte";
 	import { fade } from "svelte/transition";
 
@@ -9,14 +9,14 @@
 
 	export let onClickTask: (task: Todo) => Promise<void>;
 	export let todo: Todo;
-	export let settings: SyncCalendarPlugin;
+	export let settings: SyncCalendarPluginSettings;
 
 	$: disable = false;
 
 	let taskContentEl: HTMLDivElement;
 
 	onMount(async () => {
-		await renderMarkdown(todo.content);
+		await renderMarkdown(todo.content!);
 	});
 
 	async function renderMarkdown(content: string): Promise<void> {
@@ -43,7 +43,7 @@
 
 	// For some reason, the Todoist API returns priority in reverse order from
 	// the p1/p2/p3/p4 fluent entry notation.
-	function getPriorityClass(priority: string): string {
+	function getPriorityClass(priority: null | undefined | string): string {
 		if (priority === null || priority === undefined || priority === " ") {
 			return "todoist-p4";
 		}
@@ -56,7 +56,7 @@
 		if (priority === "⏫") {
 			return "todoist-p1";
 		}
-		return "todoist-p1";
+		return "todoist-p4";
 	}
 
 	function onClickTaskContainer(evt: MouseEvent) {
@@ -152,8 +152,8 @@
 				{/if}
 			</div>
 		{/if} -->
-		<!-- settings.renderDate -->
-		{#if todo.startDateTime}
+		<!--  -->
+		{#if settings.renderDate && todo.startDateTime}
 			<div class="task-date {todo.isOverdue() ? 'task-overdue' : ''}">
 				<svg
 					class="task-calendar-icon"
@@ -170,8 +170,7 @@
 				{todo.startDateTime.format("YYYY-MM-DD")}
 			</div>
 		{/if}
-		<!-- settings.renderLabels  -->
-		{#if todo.tags !== undefined && todo.tags?.length > 0}
+		{#if settings.renderTags && todo.tags !== undefined && todo.tags?.length > 0}
 			<div class="task-labels">
 				<svg
 					class="task-labels-icon"

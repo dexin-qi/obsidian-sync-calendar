@@ -12,23 +12,29 @@ import QueryInjector from 'Injector/QueryInjector';
 // Remember to rename these classes and interfaces!
 
 interface SyncCalendarPluginSettings {
-  proxy_enabled: boolean;
-  proxy_host: string;
-  proxy_port: number;
-  proxy_protocol: string;
+  proxyEnabled: boolean;
+  proxyHost: string;
+  proxyPort: number;
+  proxyProtocol: string;
 
   fetchWeeksAgo: number;
   fetchMaximumEvents: number;
+
+  renderDate: boolean;
+  renderTags: boolean;
 }
 
 const DEFAULT_SETTINGS: SyncCalendarPluginSettings = {
-  proxy_enabled: false,
-  proxy_host: '127.0.0.1',
-  proxy_port: 20171,
-  proxy_protocol: 'http',
+  proxyEnabled: false,
+  proxyHost: '127.0.0.1',
+  proxyPort: 20171,
+  proxyProtocol: 'http',
 
   fetchWeeksAgo: 4,
   fetchMaximumEvents: 2000,
+
+  renderDate: true,
+  renderTags: true,
 }
 
 
@@ -54,11 +60,11 @@ export default class SyncCalendarPlugin extends Plugin {
 
     this.addSettingTab(new SyncCalendarPluginSettingTab(this.app, this));
 
-    if (this.settings.proxy_enabled) {
+    if (this.settings.proxyEnabled) {
       axios.defaults.proxy = {
-        host: this.settings.proxy_host,
-        port: this.settings.proxy_port,
-        protocol: this.settings.proxy_protocol,
+        host: this.settings.proxyHost,
+        port: this.settings.proxyPort,
+        protocol: this.settings.proxyProtocol,
       };
       console.log("Proxy protocol: " + axios.defaults.proxy.protocol);
       console.log("Proxy host: " + axios.defaults.proxy.host);
@@ -101,11 +107,11 @@ export default class SyncCalendarPlugin extends Plugin {
 
     // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
     this.registerInterval(window.setInterval(() => {
-      if (this.settings.proxy_enabled) {
+      if (this.settings.proxyEnabled) {
         const proxy = {
-          host: this.settings.proxy_host,
-          port: this.settings.proxy_port,
-          protocol: this.settings.proxy_protocol,
+          host: this.settings.proxyHost,
+          port: this.settings.proxyPort,
+          protocol: this.settings.proxyProtocol,
         };
         // TODO: exam the proxy
         // this.netStatus = NetworkStatus.PROXY_ERROR;
@@ -319,9 +325,9 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       .setName("Enable Proxy")
       // .setDesc(desc)
       .addToggle(toggle =>
-        toggle.setValue(this.plugin.settings.proxy_enabled)
+        toggle.setValue(this.plugin.settings.proxyEnabled)
           .onChange(async (value) => {
-            this.plugin.settings.proxy_enabled = value;
+            this.plugin.settings.proxyEnabled = value;
             this.toggleProxySettings(value);
             await this.plugin.saveSettings();
           })
@@ -336,9 +342,9 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
           .addOption("http", "HTTP")
           .addOption("https", "HTTPS")
           .addOption("socks5", "SOCKS5")
-          .setValue(this.plugin.settings.proxy_protocol)
+          .setValue(this.plugin.settings.proxyProtocol)
           .onChange(async (value) => {
-            this.plugin.settings.proxy_protocol = value;
+            this.plugin.settings.proxyProtocol = value;
             await this.plugin.saveSettings();
           })
       )
@@ -350,9 +356,9 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       .setDesc("Enter the IP address or hostname of the proxy server")
       .addText(text =>
         text
-          .setValue(this.plugin.settings.proxy_host)
+          .setValue(this.plugin.settings.proxyHost)
           .onChange(async (value) => {
-            this.plugin.settings.proxy_host = value;
+            this.plugin.settings.proxyHost = value;
             await this.plugin.saveSettings();
           })
       )
@@ -364,11 +370,11 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       .setDesc("Enter the port number used by the proxy server")
       .addText(text =>
         text
-          .setValue(this.plugin.settings.proxy_port.toString())
+          .setValue(this.plugin.settings.proxyPort.toString())
           .onChange(async (value) => {
             const port = parseInt(value);
             if (!isNaN(port)) {
-              this.plugin.settings.proxy_port = port;
+              this.plugin.settings.proxyPort = port;
               await this.plugin.saveSettings();
             }
           })
@@ -376,13 +382,14 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       .controlEl.querySelector("input");
 
     // Hide or show the protocol type selector, address input, and port input based on whether the proxy is enabled
-    this.toggleProxySettings(this.plugin.settings.proxy_enabled);
+    this.toggleProxySettings(this.plugin.settings.proxyEnabled);
 
 
     this.createHeader(
       "Fetch Settings",
       "Settings to manage calendar fetch events."
     );
+
 
     new Setting(containerEl)
       .setName("Weeks Ago")
@@ -414,6 +421,36 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
           })
       ).controlEl.querySelector("input");
 
+    this.createHeader(
+      "Render Settings",
+      "Settings to manage render events."
+    );
+
+    new Setting(containerEl)
+      .setName("Render Date")
+      // .setDesc(desc)
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.renderDate)
+          .onChange(async (value) => {
+            this.plugin.settings.renderDate = value;
+            this.toggleProxySettings(value);
+            await this.plugin.saveSettings();
+          })
+      )
+      .controlEl.querySelector("input");
+
+    new Setting(containerEl)
+      .setName("Render Tags")
+      // .setDesc(desc)
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.renderTags)
+          .onChange(async (value) => {
+            this.plugin.settings.renderTags = value;
+            this.toggleProxySettings(value);
+            await this.plugin.saveSettings();
+          })
+      )
+      .controlEl.querySelector("input");
   }
 
   toggleProxySettings(enabled: boolean) {

@@ -62,14 +62,20 @@ export default class GoogleCalendarSync {
         let eventId = eventMeta.id;
         let eventStatus = "";
         let blockId = undefined;
+        let priority = undefined;
         let startDateTime: string;
         let dueDateTime: string;
         let tags: string[] = [];
         let updated: string | undefined = undefined;
 
         if (eventMeta.description !== null && eventMeta.description !== undefined) {
+          console.log(eventMeta);
+          eventMeta.description = eventMeta.description.replace(/<\/?span>/g, '');
           try {
             blockId = JSON.parse(eventMeta.description).blockId;
+          } catch (e) { console.error(e); }
+          try {
+            priority = JSON.parse(eventMeta.description).priority;
           } catch (e) { console.error(e); }
           try {
             eventStatus = JSON.parse(eventMeta.description).eventStatus;
@@ -101,6 +107,7 @@ export default class GoogleCalendarSync {
         eventsList.push(
           new Todo({
             content,
+            priority,
             blockId,
             startDateTime,
             dueDateTime,

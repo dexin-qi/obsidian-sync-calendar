@@ -91,6 +91,7 @@ export class Todo {
     return JSON.stringify({
       eventStatus: this.eventStatus ? this.eventStatus : 'todo',
       blockId: this.blockId,
+      priority: this.priority,
       tags: this.tags,
     });
   }
