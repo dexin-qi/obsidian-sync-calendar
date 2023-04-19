@@ -1,11 +1,11 @@
 import { App, TFile, Notice } from "obsidian";
 
 import crypto from "crypto";
+import { Mutex } from 'async-mutex';
 
 import { DEFAULT_SYMBOLS } from "TodoSerialization/DefaultSerialization";
 import { DefaultTodoSerializer, type TodoDetails } from "TodoSerialization";
 import { Todo } from "TodoSerialization/Todo";
-import { Mutex } from 'async-mutex';
 
 export default class ObsidianTasksSync {
   app: App;

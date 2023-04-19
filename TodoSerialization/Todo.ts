@@ -14,9 +14,11 @@ export class Todo {
   public children?: Todo[] | undefined;
 
   public calUId?: null | string | undefined;
+  public eventId?: null | string | undefined;
 
   public path?: string | undefined;
   public blockId?: null | string | undefined;
+  public eventStatus?: null | string | undefined;
 
   public updated?: null | string | undefined;
 
@@ -30,8 +32,10 @@ export class Todo {
     children,
     path,
     blockId,
+    eventStatus,
     updated,
-    calUId
+    calUId,
+    eventId
   }: {
     content: null | string | undefined;
     priority?: null | string | undefined;
@@ -42,8 +46,10 @@ export class Todo {
     children?: Todo[] | undefined;
     path?: string | undefined;
     blockId?: null | string | undefined;
+    eventStatus?: null | string | undefined;
     updated?: null | string | undefined;
     calUId?: null | string | undefined;
+    eventId?: null | string | undefined;
   }) {
     this.content = content;
 
@@ -57,8 +63,10 @@ export class Todo {
 
     this.path = path;
     this.blockId = blockId;
+    this.eventStatus = eventStatus;
 
     this.calUId = calUId;
+    this.eventId = eventId;
 
     this.updated = updated;
   }
@@ -73,8 +81,18 @@ export class Todo {
     if (todo.children) { this.children = todo.children; }
     if (todo.path) { this.path = todo.path; }
     if (todo.blockId) { this.blockId = todo.blockId; }
+    if (todo.eventStatus) { this.eventStatus = todo.eventStatus; }
     if (todo.calUId) { this.calUId = todo.calUId; }
+    if (todo.eventId) { this.eventId = todo.eventId; }
     if (todo.updated) { this.updated = todo.updated; }
+  }
+
+  public serializeDescription(): string {
+    return JSON.stringify({
+      eventStatus: this.eventStatus ? this.eventStatus : 'todo',
+      blockId: this.blockId,
+      tags: this.tags,
+    });
   }
 
   static todosListsIdentical(oldTasks: Todo[], newTodos: Todo[]): boolean {
@@ -90,6 +108,7 @@ export class Todo {
       'priority',
       'tags',
       'calUId',
+      'eventId',
       'path',
       'blockId',
       'updated',

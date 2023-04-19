@@ -10,7 +10,7 @@
 
 	export let todo: Todo;
 
-	$: isCompletable = !todo.content.startsWith("*");
+	$: disable = false;
 
 	let taskContentEl: HTMLDivElement;
 
@@ -67,19 +67,19 @@
 		new Menu()
 			.addItem((menuItem) =>
 				menuItem
-					.setTitle("Complete task")
-					.setIcon("check-small")
-					.onClick(() => {})
-			)
-			.addItem((menuItem) =>
-				menuItem
-					.setTitle("Open task in Todoist (app)")
+					.setTitle("Delete todo")
 					.setIcon("popup-open")
 					.onClick(() => {})
 			)
 			.addItem((menuItem) =>
 				menuItem
-					.setTitle("Open task in Todoist (web)")
+					.setTitle("Edit todo in obsidian")
+					.setIcon("popup-open")
+					.onClick(() => {})
+			)
+			.addItem((menuItem) =>
+				menuItem
+					.setTitle("Edit todo in calendar (web)")
 					.setIcon("popup-open")
 					.onClick(() => {})
 			)
@@ -108,11 +108,12 @@
 >
 	<div>
 		<input
-			disabled={!isCompletable}
+			disabled={disable}
 			data-line="1"
 			class="task-list-item-checkbox"
 			type="checkbox"
-			on:click|preventDefault={async () => {
+			on:click={async () => {
+				disable = true;
 				await onClickTask(todo);
 			}}
 		/>

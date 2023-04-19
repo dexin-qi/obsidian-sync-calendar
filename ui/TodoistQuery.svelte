@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { NetworkStatus } from "Syncs/StatusEnumerate";
 	import type SyncCalendarPlugin from "main";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
 	import type { Todo } from "TodoSerialization/Todo";
@@ -8,9 +9,6 @@
 	import ErrorDisplay from "./ErrorDisplay.svelte";
 	import TaskList from "./TaskList.svelte";
 	import NoTaskDisplay from "./NoTaskDisplay.svelte";
-	import { rejects } from "assert";
-	import { resolve } from "path";
-	import { apiVersion } from "obsidian";
 
 	export let plugin: SyncCalendarPlugin;
 	export let api: GoogleCalendarSync;
@@ -19,6 +17,7 @@
 	let eventsList: Todo[] = [];
 
 	let autoRefreshIntervalId: null | number = null;
+	let autoPatchIntervalId: number;
 
 	let error_info: null | Error = null;
 	let fetchedOnce = false;
@@ -54,19 +53,24 @@
 		}
 		fetching = true;
 		plugin.syncStatusItem.setText("Sync: 🔽");
-    
+
 		const fetchPromise = api
 			.fetchTodos(
-        plugin.settings.fetchWeeksAgo,
-        plugin.settings.fetchMaximumEvents
-      )
+				plugin.settings.fetchWeeksAgo,
+				plugin.settings.fetchMaximumEvents
+			)
 			.then((newEventsList) => {
 				eventsList = newEventsList;
 				fetchedOnce = true;
-				plugin.syncStatusItem.setText("Sync: 🔵");
-				console.info(`Fetched success: ${eventsList.length} events`);
+				plugin.netStatus = NetworkStatus.HEALTH;
+				plugin.syncStatusItem.setText("Sync: 🆗");
+				console.info(
+					`Successfully Fetched ${eventsList.length} events`
+				);
 			})
 			.catch((err) => {
+				console.error(err);
+				plugin.netStatus = NetworkStatus.CONNECTION_ERROR;
 				throw new Error(
 					"Connection failed, \
           cannot fetch events from Google calendar."
@@ -93,7 +97,8 @@
 			.catch((err) => {
 				fetching = false;
 				error_info = err;
-				plugin.syncStatusItem.setText("Sync: 🔴");
+				plugin.netStatus = NetworkStatus.CONNECTION_ERROR;
+				plugin.syncStatusItem.setText("Sync: 🆖");
 			});
 	}
 </script>
@@ -107,7 +112,7 @@
 			{eventsList.length}
 			{eventsListTitle}
 		</h4>
-		<TaskList todoList={eventsList} />
+		<TaskList {api} todoList={eventsList} />
 	{/if}
 {/if}
 {#if error_info !== null}

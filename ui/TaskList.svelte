@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
-	// import type { Todo, ID } from "../api/models";
 
-	// import type { GoogleCalendarSync } from "../syncs/google_calendar";
-	import type { Todo } from "../TodoSerialization/Todo";
+	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
+	import type { Todo } from "TodoSerialization/Todo";
 
 	import TaskRenderer from "./TaskRenderer.svelte";
 	import NoTaskDisplay from "./NoTaskDisplay.svelte";
 
+	export let api: GoogleCalendarSync;
 	export let todoList: Todo[];
-	// export let api: GoogleCalendarSync;
 
 	// export let sorting: string[];
 	// export let renderProject: boolean = true;
@@ -28,8 +27,12 @@
 	// 	.filter((task) => !tasksPendingClose.includes(task.id))
 	// 	.sort((first: Todo, second: Todo) => first.compareTo(second, sorting));
 
-	async function onClickTask(task: Todo) {
-		console.log("user confirmed, event terminated!");
+	async function onClickTask(todo: Todo) {
+		api.doneEventsQueue.enqueue(todo);
+		// if (todo.blockId === null || todo.blockId === undefined) {
+		// }
+		// console.log(`user confirmed, event ${task.blockId} terminated!`);
+
 		// 	tasksPendingClose.push(task.id);
 		// 	tasksPendingClose = tasksPendingClose;
 

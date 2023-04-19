@@ -1,12 +1,10 @@
 import axios from 'axios';
-import type { Duration } from 'moment';
 
-import { App, type PluginManifest, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, type PluginManifest, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 import type { Todo } from 'TodoSerialization/Todo';
-import { TodosEvents } from 'TodoSerialization/TodoEvents';
-import { Cache, State } from 'TodoSerialization/Cache';
 import GoogleCalendarSync from 'Syncs/GoogleCalendarSync'
+import { NetworkStatus } from 'Syncs/StatusEnumerate';
 import ObsidianTasksSync from 'Syncs/ObsidianTasksSync';
 import QueryInjector from 'Injector/QueryInjector';
 // import SyncResultModal from './Modals/syncResult'
@@ -36,9 +34,12 @@ const DEFAULT_SETTINGS: SyncCalendarPluginSettings = {
 
 export default class SyncCalendarPlugin extends Plugin {
   public settings: SyncCalendarPluginSettings;
+
   public syncStatusItem: HTMLElement;
 
-  private cache: Cache | undefined;
+  public netStatus: NetworkStatus;
+  public netStatusItem: HTMLElement;
+
   private calendarSync: GoogleCalendarSync;
   private obsidianSync: ObsidianTasksSync;
 
@@ -67,24 +68,11 @@ export default class SyncCalendarPlugin extends Plugin {
       console.log("Proxy Not Enabled!");
     }
 
-    // const events = new TodosEvents({ obsidianEvents: this.app.workspace });
-    // this.cache = new Cache({
-    //   app: this.app,
-    //   metadataCache: this.app.metadataCache,
-    //   vault: this.app.vault,
-    //   events,
-    // });
-
-    // this.app.plugins..registerEvent(plugin.app.metadataCache.on("dataview:metadata-change",
-    // ));
-
-    // this.app.workspace.trigger("dataview:index-ready", () => {
-    //   console.log("!!! Dateview is ready, dexin has receive callback!!!");
-    // });
-
     // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
+    this.netStatusItem = this.addStatusBarItem();
+    this.netStatusItem.setText("Net: 🔵");
     this.syncStatusItem = this.addStatusBarItem();
-    this.syncStatusItem.setText("Sync: 🟠");
+    this.syncStatusItem.setText("Sync: *️⃣");
 
     this.calendarSync = new GoogleCalendarSync(this.app.vault);
     this.obsidianSync = new ObsidianTasksSync(this.app);
@@ -111,8 +99,38 @@ export default class SyncCalendarPlugin extends Plugin {
       }
     });
 
-    // // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-    // this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+    // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
+    this.registerInterval(window.setInterval(() => {
+      if (this.settings.proxy_enabled) {
+        const proxy = {
+          host: this.settings.proxy_host,
+          port: this.settings.proxy_port,
+          protocol: this.settings.proxy_protocol,
+        };
+        // TODO: exam the proxy
+        // this.netStatus = NetworkStatus.PROXY_ERROR;
+      }
+
+      switch (this.netStatus) {
+        case NetworkStatus.CONNECTION_ERROR:
+          this.netStatusItem.setText("Net: 🔴");
+          break;
+        case NetworkStatus.PROXY_ERROR:
+          this.netStatusItem.setText("Net: 🟠");
+          break;
+        case NetworkStatus.HEALTH:
+          this.netStatusItem.setText("Net: 🟢");
+          break;
+        case NetworkStatus.UNKOWN:
+          this.netStatusItem.setText("Net: 🔵");
+        default:
+          break;
+      }
+    }, 5000));
+
+    this.registerInterval(window.setInterval(() => {
+      this.patchDoneEventLists();
+    }, 1000));
   }
 
   onunload() {
@@ -227,16 +245,36 @@ export default class SyncCalendarPlugin extends Plugin {
       eventDescs.push('Sync Result: no update');
     }
 
-    this.syncStatusItem.setText('Sync: 🟢');
+    this.netStatus = NetworkStatus.HEALTH;
+    this.syncStatusItem.setText('Sync: 🆗');
 
     // new SyncResultModal(this.app, eventDescs).open();
     new Notice(eventDescs.join('\n'));
   }
 
-  private onRequestCacheUpdate({ todos, state }: { todos: Todo[], state: State }) {
-    console.debug('onRequestCacheUpdate');
-    console.info(`state: ${state.toString()}`);
-    console.info(`todos: ${todos}`);
+  private async patchDoneEventLists() {
+    const apiIsReady = await this.calendarSync.isReady();
+    if (!apiIsReady) {
+      return;
+    }
+    const originNeedToPath = this.calendarSync.doneEventsQueue.length;
+    if (originNeedToPath <= 0) {
+      return;
+    }
+
+    this.syncStatusItem.setText("Sync: ⬆️");
+    this.calendarSync.doneEventsQueue.refresh().then((isAllSucc) => {
+      if (isAllSucc) {
+        this.netStatus = NetworkStatus.HEALTH;
+        this.syncStatusItem.setText("Sync: 🆗");
+        console.info(
+          `Successfully Patched ${originNeedToPath - this.calendarSync.doneEventsQueue.length
+          } events!`
+        );
+      } else {
+        this.syncStatusItem.setText("Sync: 🆖");
+      }
+    });
   }
 
   async loadSettings() {
