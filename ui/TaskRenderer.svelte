@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Menu, Notice, MarkdownRenderer } from "obsidian";
+	import SyncCalendarPlugin from "main";
 	import { onMount } from "svelte";
 	import { fade } from "svelte/transition";
 
@@ -7,8 +8,8 @@
 	// import TaskList from "./TaskList.svelte";
 
 	export let onClickTask: (task: Todo) => Promise<void>;
-
 	export let todo: Todo;
+	export let settings: SyncCalendarPlugin;
 
 	$: disable = false;
 
@@ -98,13 +99,15 @@
 	}
 </script>
 
-<!-- transition:fade={{ duration: settings.fadeToggle ? 400 : 0 }} -->
-<!-- {todo.isOverdue() ? 'task-overdue' : ''} -->
 <li
 	on:contextmenu={onClickTaskContainer}
 	transition:fade={{ duration: 400 }}
-	class="task-list-item {getPriorityClass(todo.priority)} 
-          {todo.hasTime ? 'has-time' : 'has-no-time'}"
+	class="
+  task-list-item
+  has-time
+  {getPriorityClass(todo.priority)} 
+  {todo.isOverdue() ? 'task-overdue' : ''}
+  "
 >
 	<div>
 		<input
@@ -119,8 +122,8 @@
 		/>
 		<div bind:this={taskContentEl} class="todoist-task-content" />
 	</div>
-	<!-- <div class="task-metadata">
-		{#if settings.renderProject && renderProject}
+	<div class="task-metadata">
+		<!--	{#if settings.renderProject && renderProject}
 			<div class="task-project">
 				{#if settings.renderProjectIcon}
 					<svg
@@ -148,48 +151,46 @@
 					).name}
 				{/if}
 			</div>
-		{/if}
-		{#if settings.renderDate && todo.date}
+		{/if} -->
+		<!-- settings.renderDate -->
+		{#if todo.startDateTime}
 			<div class="task-date {todo.isOverdue() ? 'task-overdue' : ''}">
-				{#if settings.renderDateIcon}
-					<svg
-						class="task-calendar-icon"
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				{/if}
-				{todo.date}
+				<svg
+					class="task-calendar-icon"
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+				{todo.startDateTime.format("YYYY-MM-DD")}
 			</div>
 		{/if}
-		{#if settings.renderLabels && todo.labels.length > 0}
+		<!-- settings.renderLabels  -->
+		{#if todo.tags !== undefined && todo.tags?.length > 0}
 			<div class="task-labels">
-				{#if settings.renderLabelsIcon}
-					<svg
-						class="task-labels-icon"
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				{/if}
-				{#each todo.labels as label, i}
-					{label}{#if i != todo.labels.length - 1},{/if}
+				<svg
+					class="task-labels-icon"
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+				{#each todo.tags as tag, i}
+					{tag}{#if i != todo.tags.length - 1},{/if}
 				{/each}
 			</div>
 		{/if}
-	</div> -->
+	</div>
 	<!-- {#if todo.children.length != 0}
 		<TaskList
 			tasks={todo.children}

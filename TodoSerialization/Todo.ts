@@ -95,6 +95,9 @@ export class Todo {
     });
   }
 
+  // TODO: isOverdue 
+  public isOverdue(): boolean { return false; }
+
   static todosListsIdentical(oldTasks: Todo[], newTodos: Todo[]): boolean {
     if (oldTasks.length !== newTodos.length) {
       return false;

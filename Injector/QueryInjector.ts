@@ -4,9 +4,9 @@ import {
   MarkdownRenderChild,
 } from "obsidian";
 
-import SyncCalendarPlugin from "main";
-
-import GoogleCalendarSync from "../Syncs/GoogleCalendarSync";
+import type SyncCalendarPlugin from "main";
+import type SyncCalendarPluginSettings from "main";
+import type GoogleCalendarSync from "../Syncs/GoogleCalendarSync";
 
 import TodoistQuery from "../ui/TodoistQuery.svelte";
 import type SvelteComponentDev from "../ui/TodoistQuery.svelte";
@@ -14,15 +14,18 @@ import ErrorDisplay from "../ui/ErrorDisplay.svelte";
 // import SvelteComponentDev
 
 export default class QueryInjector {
-  private app: App;
   private pendingQueries: PendingQuery[];
-
+    
+  private settings: SyncCalendarPluginSettings;
+  
   private plugin: SyncCalendarPlugin;
+  private app: App;
   private calendarSync: GoogleCalendarSync;
 
-  constructor(plugin: SyncCalendarPlugin, app: App) {
+  constructor(plugin: SyncCalendarPlugin) {
     this.plugin = plugin;
-    this.app = app;
+    this.app = plugin.app;
+    this.settings = plugin.settings;
     this.pendingQueries = [];
   }
 
@@ -60,7 +63,7 @@ export default class QueryInjector {
         props: {
           plugin: this.plugin,
           api: this.calendarSync,
-
+          settings: this.settings,
         },
       });
     });

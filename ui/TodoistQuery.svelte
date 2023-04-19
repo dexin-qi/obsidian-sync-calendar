@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { NetworkStatus } from "Syncs/StatusEnumerate";
+	import type SyncCalendarPluginSettings from "main";
 	import type SyncCalendarPlugin from "main";
+	import { NetworkStatus } from "Syncs/StatusEnumerate";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
 	import type { Todo } from "TodoSerialization/Todo";
 
@@ -12,6 +13,7 @@
 
 	export let plugin: SyncCalendarPlugin;
 	export let api: GoogleCalendarSync;
+	export let settings: SyncCalendarPluginSettings;
 
 	let fetching = false;
 	let eventsList: Todo[] = [];
@@ -112,7 +114,7 @@
 			{eventsList.length}
 			{eventsListTitle}
 		</h4>
-		<TaskList {api} todoList={eventsList} />
+		<TaskList {api} {settings} todoList={eventsList} />
 	{/if}
 {/if}
 {#if error_info !== null}

@@ -64,15 +64,19 @@ export default class GoogleCalendarSync {
         let blockId = undefined;
         let startDateTime: string;
         let dueDateTime: string;
+        let tags: string[] = [];
         let updated: string | undefined = undefined;
 
         if (eventMeta.description !== null && eventMeta.description !== undefined) {
           try {
             blockId = JSON.parse(eventMeta.description).blockId;
+          } catch (e) { console.error(e); }
+          try {
             eventStatus = JSON.parse(eventMeta.description).eventStatus;
-          } catch (e) {
-            console.error(e);
-          }
+          } catch (e) { console.error(e); }
+          try {
+            tags = JSON.parse(eventMeta.description).tags;
+          } catch (e) { console.error(e); }
         }
         if (eventStatus === "done") {
           return;
@@ -103,7 +107,8 @@ export default class GoogleCalendarSync {
             calUId,
             eventId,
             eventStatus,
-            updated
+            updated,
+            tags
           })
         );
 

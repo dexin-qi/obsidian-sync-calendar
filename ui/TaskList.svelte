@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
 
+	import type SyncCalendarPluginSettings from "main";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
 	import type { Todo } from "TodoSerialization/Todo";
 
@@ -9,6 +10,7 @@
 
 	export let api: GoogleCalendarSync;
 	export let todoList: Todo[];
+	export let settings: SyncCalendarPluginSettings;
 
 	// export let sorting: string[];
 	// export let renderProject: boolean = true;
@@ -49,7 +51,7 @@
 {#if todos.length != 0}
 	<ul class="contains-task-list todoist-task-list">
 		{#each todos as todo (todo.calUId)}
-			<TaskRenderer {onClickTask} {todo} />
+			<TaskRenderer {onClickTask} {settings} {todo} />
 		{/each}
 	</ul>
 {:else}

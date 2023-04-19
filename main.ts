@@ -77,7 +77,7 @@ export default class SyncCalendarPlugin extends Plugin {
     this.calendarSync = new GoogleCalendarSync(this.app.vault);
     this.obsidianSync = new ObsidianTasksSync(this.app);
 
-    this.queryInjector = new QueryInjector(this, this.app);
+    this.queryInjector = new QueryInjector(this);
     this.queryInjector.setCalendarSync(this.calendarSync);
 
     this.registerMarkdownCodeBlockProcessor("calendar-sync",
