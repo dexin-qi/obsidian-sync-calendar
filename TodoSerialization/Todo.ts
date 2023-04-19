@@ -99,6 +99,18 @@ export class Todo {
   // TODO: isOverdue 
   public isOverdue(): boolean { return false; }
 
+  static isDatetime(datatimeString: string): boolean {
+    const regDateTime = /(\d{4}-\d{2}-\d{2}T)/u;
+    return datatimeString.match(regDateTime) !== null;
+  }
+
+  static momentString(momentString: string, emoji: '🛫' | '⌛' | '🗓'): string {
+    if (Todo.isDatetime(momentString)) {
+      return `${emoji} ${window.moment(momentString).format("YYYY-MM-DD[@]HH:mm")}`;
+    }
+    return `${emoji} ${momentString}`;
+  }
+
   static todosListsIdentical(oldTasks: Todo[], newTodos: Todo[]): boolean {
     if (oldTasks.length !== newTodos.length) {
       return false;

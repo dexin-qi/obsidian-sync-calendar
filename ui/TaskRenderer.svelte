@@ -4,10 +4,10 @@
 	import { onMount } from "svelte";
 	import { fade } from "svelte/transition";
 
-	import type { Todo } from "../TodoSerialization/Todo";
+	import { Todo } from "../TodoSerialization/Todo";
 	// import TaskList from "./TaskList.svelte";
 
-	export let onClickTask: (task: Todo) => Promise<void>;
+	export let onClickTask: (todo: Todo) => Promise<void>;
 	export let todo: Todo;
 	export let settings: SyncCalendarPluginSettings;
 
@@ -25,7 +25,7 @@
 			content = `\\${content}`;
 		}
 
-		// A task starting with '*' signifies that it cannot be completed, so we should strip it from the front of the task.
+		// A todo starting with '*' signifies that it cannot be completed, so we should strip it from the front of the todo.
 		if (content.startsWith("*")) {
 			content = content.substring(1);
 		}
@@ -45,18 +45,18 @@
 	// the p1/p2/p3/p4 fluent entry notation.
 	function getPriorityClass(priority: null | undefined | string): string {
 		if (priority === null || priority === undefined || priority === " ") {
-			return "todoist-p4";
+			return "todo-list-p4";
 		}
 		if (priority === "🔽") {
-			return "todoist-p3";
+			return "todo-list-p3";
 		}
 		if (priority === "🔼") {
-			return "todoist-p2";
+			return "todo-list-p2";
 		}
 		if (priority === "⏫") {
-			return "todoist-p1";
+			return "todo-list-p1";
 		}
-		return "todoist-p4";
+		return "todo-list-p4";
 	}
 
 	function onClickTaskContainer(evt: MouseEvent) {
@@ -91,7 +91,7 @@
 
 		// showTaskContext(
 		// 	{
-		// 		task: todo,
+		// 		todo: todo,
 		// 		onClickTask: onClickTask,
 		// 	},
 
@@ -103,31 +103,30 @@
 	on:contextmenu={onClickTaskContainer}
 	transition:fade={{ duration: 400 }}
 	class="
-  task-list-item
+  todo-list-item
   has-time
   {getPriorityClass(todo.priority)} 
-  {todo.isOverdue() ? 'task-overdue' : ''}
+  {todo.isOverdue() ? 'todo-overdue' : ''}
   "
 >
 	<div>
 		<input
 			disabled={disable}
-			data-line="1"
-			class="task-list-item-checkbox"
+			class="todo-list-item-checkbox"
 			type="checkbox"
 			on:click={async () => {
 				disable = true;
 				await onClickTask(todo);
 			}}
 		/>
-		<div bind:this={taskContentEl} class="todoist-task-content" />
+		<div bind:this={taskContentEl} class="todo-list-todo-content" />
 	</div>
-	<div class="task-metadata">
-		<!--	{#if settings.renderProject && renderProject}
-			<div class="task-project">
+	<div class="todo-metadata">
+		<!-- {#if settings.renderProject && renderProject}
+			<div class="todo-project">
 				{#if settings.renderProjectIcon}
 					<svg
-						class="task-project-icon"
+						class="todo-project-icon"
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 20 20"
 						fill="currentColor"
@@ -152,11 +151,10 @@
 				{/if}
 			</div>
 		{/if} -->
-		<!--  -->
 		{#if settings.renderDate && todo.startDateTime}
-			<div class="task-date {todo.isOverdue() ? 'task-overdue' : ''}">
+			<div class="todo-date {todo.isOverdue() ? 'todo-overdue' : ''}">
 				<svg
-					class="task-calendar-icon"
+					class="todo-calendar-icon"
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
@@ -167,13 +165,13 @@
 						clip-rule="evenodd"
 					/>
 				</svg>
-				{todo.startDateTime.format("YYYY-MM-DD")}
+				{Todo.momentString(todo.startDateTime, "🛫")}
 			</div>
 		{/if}
 		{#if settings.renderTags && todo.tags !== undefined && todo.tags?.length > 0}
-			<div class="task-labels">
+			<div class="todo-labels">
 				<svg
-					class="task-labels-icon"
+					class="todo-labels-icon"
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
@@ -184,8 +182,12 @@
 						clip-rule="evenodd"
 					/>
 				</svg>
+
 				{#each todo.tags as tag, i}
-					{tag}{#if i != todo.tags.length - 1},{/if}
+					<a href="tag" class="tag" target="_blank" rel="noopener">
+						{tag}
+					</a>
+					{#if i != todo.tags.length - 1}<span>,</span>{/if}
 				{/each}
 			</div>
 		{/if}

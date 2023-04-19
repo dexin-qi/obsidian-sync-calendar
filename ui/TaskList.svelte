@@ -26,30 +26,16 @@
 	$: todos = todoList;
 	// let tasksPendingClose: ID[] = [];
 	// $: todos = tasks
-	// 	.filter((task) => !tasksPendingClose.includes(task.id))
+	// 	.filter((todo) => !tasksPendingClose.includes(todo.id))
 	// 	.sort((first: Todo, second: Todo) => first.compareTo(second, sorting));
 
 	async function onClickTask(todo: Todo) {
 		api.doneEventsQueue.enqueue(todo);
-		// if (todo.blockId === null || todo.blockId === undefined) {
-		// }
-		// console.log(`user confirmed, event ${task.blockId} terminated!`);
-
-		// 	tasksPendingClose.push(task.id);
-		// 	tasksPendingClose = tasksPendingClose;
-
-		// 	if (await api.closeTask(task.id)) {
-		// 		tasks.filter((otherTask) => otherTask.id == task.id);
-		// 		tasks = tasks;
-		// 	}
-
-		// 	tasksPendingClose.filter((id) => id == task.id);
-		// 	tasksPendingClose = tasksPendingClose;
 	}
 </script>
 
 {#if todos.length != 0}
-	<ul class="contains-task-list todoist-task-list">
+	<ul class="contains-todo-list todo-list-todo-list">
 		{#each todos as todo (todo.calUId)}
 			<TaskRenderer {onClickTask} {settings} {todo} />
 		{/each}

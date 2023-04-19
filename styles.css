@@ -7,27 +7,39 @@ If your plugin does not need CSS, delete this file.
 
 */
 
-.calendar-sync-error {
-  background-color: rgb(var(--background-modifier-error-rgb), 0.5);
-  border: 1px solid var(--background-modifier-error);
-  padding: 0 10px 20px 10px;
-  margin-top: 20px;
+:root {
+  --font-todo-list-metadata-size: 14px;
+  --font-todo-list-title-size: 18px;
+
+  --gray-1: #131421;
+  --gray-2: #191a2a;
+  --gray-3: #1e2030;
+  --gray-4: #222436;
+  --gray-5: #2f334d;
+  --gray-6: #444a73;
+  --gray-7: #828bb8;
+  --gray-8: #a9b8e8;
+  --gray-9: #b4c2f0;
+  --gray-10: #c8d3f5;
 }
 
-
-.todoist-query-title {
+.todo-list-query-title {
   display: inline;
   font-size: 1.25em;
 }
 
-.todoist-refresh-button {
+.todo-list-refresh-button {
   display: inline;
-  margin-left: 8px;
-  margin-right: 8px;
+  margin-left: 0;
+  margin-right: 0;
   float: right;
 }
 
-.todoist-refresh-spin {
+.is-live-preview .todo-list-refresh-button {
+  margin-right: 40px;
+}
+
+.todo-list-refresh-spin {
   animation: spin 1s linear infinite;
 }
 
@@ -37,52 +49,42 @@ If your plugin does not need CSS, delete this file.
   }
 }
 
-.task-metadata {
-  margin-left: 4px;
+.todo-metadata {
+  padding-left: 20px;
 }
 
-.task-calendar-icon,
-.task-project-icon,
-.task-labels-icon {
+.todo-calendar-icon,
+.todo-project-icon,
+.todo-labels-icon {
   vertical-align: middle;
   height: 17px;
   width: 17px;
 }
 
-.task-date.task-overdue {
-  color: var(--text-error);
-}
-
-.todoist-project {
+.todo-list-project {
   white-space: normal;
 }
 
-.todoist-project .todoist-project {
-  margin-left: 20px;
-}
-
-.todoist-project .todoist-section {
-  margin-left: 20px;
-}
-
-.todoist-error {
+.todo-list-error {
   background-color: rgb(var(--background-modifier-error-rgb), 0.5);
   border: 1px solid var(--background-modifier-error);
   padding: 0 10px 20px 10px;
   margin-top: 20px;
 }
 
-.todoist-success {
+.todo-list-success {
   border: 1px solid var(--background-modifier-border);
   padding: 0 10px 20px 10px;
   margin-top: 20px;
 }
 
-.todoist-task-content {
+.todo-list-todo-content {
   display: inline;
 }
 
-ul.todoist-task-list {
+ul.todo-list-todo-list {
+  padding-left: 0;
+  list-style: none;
   white-space: normal;
 }
 
@@ -90,55 +92,72 @@ ul.todoist-task-list {
   display: none;
 }
 
-.is-live-preview .block-language-todoist {
+.is-live-preview .block-language-calendar-sync {
   padding-left: 15px;
 }
 
 .theme-dark {
-  --todoist-p1-border: #ff7066;
-  --todoist-p1-border-hover: #ff706680;
-  --todoist-p1-background: rgba(255, 112, 102, .1);
+  --todo-list-p1-border: #ff7066;
+  --todo-list-p1-border-hover: #ff706680;
+  --todo-list-p1-background: rgba(255, 112, 102, .1);
 
-  --todoist-p2-border: #ff9a14;
-  --todoist-p2-border-hover: #ff9a1480;
-  --todoist-p2-background: rgba(255, 154, 20, .1);
+  --todo-list-p2-border: #ff9a14;
+  --todo-list-p2-border-hover: #ff9a1480;
+  --todo-list-p2-background: rgba(255, 154, 20, .1);
 
-  --todoist-p3-border: #5297ff;
-  --todoist-p3-border-hover: #5297ff80;
-  --todoist-p3-background: rgba(82, 151, 255, .1);
+  --todo-list-p3-border: #5297ff;
+  --todo-list-p3-border-hover: #5297ff80;
+  --todo-list-p3-background: rgba(82, 151, 255, .1);
+
+  --todo-list-p4-border: #828bb8;
+  --todo-list-p4-border-hover: #828bb880;
+  --todo-list-p4-background: rgba(111, 111, 111, .1);
 }
 
 .theme-light {
-  --todoist-p1-border: #d1453b;
-  --todoist-p1-border-hover: #d1453b80;
-  --todoist-p1-background: rgba(209, 69, 59, .1);
+  --todo-list-p1-border: #d1453b;
+  --todo-list-p1-border-hover: #d1453b80;
+  --todo-list-p1-background: rgba(209, 69, 59, .1);
 
-  --todoist-p2-border: #eb8909;
-  --todoist-p2-border-hover: #eb890980;
-  --todoist-p2-background: rgba(235, 137, 9, .1);
+  --todo-list-p2-border: #eb8909;
+  --todo-list-p2-border-hover: #eb890980;
+  --todo-list-p2-background: rgba(235, 137, 9, .1);
 
-  --todoist-p3-border: #246fe0;
-  --todoist-p3-border-hover: #246fe080;
-  --todoist-p3-background: rgba(36, 111, 224, .1);
+  --todo-list-p3-border: #246fe0;
+  --todo-list-p3-border-hover: #246fe080;
+  --todo-list-p3-background: rgba(36, 111, 224, .1);
+
+  --todo-list-p4-border: #828bb8;
+  --todo-list-p4-border-hover: #828bb880;
+  --todo-list-p4-background: rgba(111, 111, 111, .1);
 }
 
-.todoist-p1 input {
-  --checkbox-border-color: var(--todoist-p1-border);
-  --checkbox-border-color-hover: var(--todoist-p1-border-hover);
-  background-color: var(--todoist-p1-background);
-
+.todo-list-p1 input {
+  --checkbox-border-color: var(--todo-list-p1-border);
+  --checkbox-border-color-hover: var(--todo-list-p1-border-hover);
+  border-radius: 50% !important;
+  background-color: var(--todo-list-p1-background);
 }
 
-.todoist-p2 input {
-  --checkbox-border-color: var(--todoist-p2-border);
-  --checkbox-border-color-hover: var(--todoist-p2-border-hover);
-  background-color: var(--todoist-p2-background);
+.todo-list-p2 input {
+  --checkbox-border-color: var(--todo-list-p2-border);
+  --checkbox-border-color-hover: var(--todo-list-p2-border-hover);
+  border-radius: 50% !important;
+  background-color: var(--todo-list-p2-background);
 }
 
-.todoist-p3 input {
-  --checkbox-border-color: var(--todoist-p3-border);
-  --checkbox-border-color-hover: var(--todoist-p3-border-hover);
-  background-color: var(--todoist-p3-background);
+.todo-list-p3 input {
+  --checkbox-border-color: var(--todo-list-p3-border);
+  --checkbox-border-color-hover: var(--todo-list-p3-border-hover);
+  border-radius: 50% !important;
+  background-color: var(--todo-list-p3-background);
+}
+
+.todo-list-p4 input {
+  --checkbox-border-color: var(--todo-list-p4-border);
+  --checkbox-border-color-hover: var(--todo-list-p4-border-hover);
+  border-radius: 50% !important;
+  background-color: var(--todo-list-p4-background);
 }
 
 /* cm-list-2 */
@@ -148,8 +167,6 @@ ul.todoist-task-list {
 }
 
 /* Settings */
-
-
 p.sync-calendar-setting-header-title {
   display: block;
   padding: 6px 0;
@@ -166,4 +183,70 @@ p.sync-calendar-setting-header-description {
   margin-bottom: 2px;
   font-size: 0.8em;
   font-family: "Segoe UI Emoji", "Noto Color Emoji";
+}
+
+.todo-metadata {
+  font-size: var(--font-todo-list-metadata-size);
+  color: #7a88cf;
+  margin-left: unset !important;
+}
+
+.todo-metadata>* {
+  margin-right: 30px;
+}
+
+.todo-date.todo-overdue {
+  color: rgba(var(--light-red), 0.75) !important;
+}
+
+.todo-calendar-icon,
+.todo-project-icon,
+.todo-labels-icon {
+  vertical-align: middle;
+  height: 17px;
+  width: 17px;
+}
+
+.todo-list-project .todo-list-project {
+  margin-left: 20px;
+}
+
+.todo-list-section {
+  margin-left: 20px;
+}
+
+.todo-list-project .todo-list-project-title {
+  font-weight: 700;
+  margin-block-end: 0px;
+}
+
+.todo-list-section .todo-list-section-title {
+  font-size: var(--font-todo-list-title-size);
+  color: var(--indigo);
+  font-weight: 700;
+  margin-block-end: 0px;
+}
+
+.todo-list-error {
+  border: 1px solid #d1453b;
+  background-color: rgba(#d1453b, 0.05);
+  padding: 1em 1em;
+  margin: 1em 0px;
+}
+
+.todo-list-error p {
+  margin: 0 0 1em 0;
+  font-weight: 600;
+}
+
+.todo-list-error code {
+  background-color: unset !important;
+  padding: unset !important;
+  margin: unset !important;
+  color: var(--dark-blue);
+  font-weight: 600;
+  font-family: var(--font-stack-monospace) !important;
+  border: 1px solid var(--dark-blue) !important;
+  border-radius: 4px;
+  white-space: nowrap;
 }

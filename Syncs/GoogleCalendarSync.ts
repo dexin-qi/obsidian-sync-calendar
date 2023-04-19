@@ -69,7 +69,6 @@ export default class GoogleCalendarSync {
         let updated: string | undefined = undefined;
 
         if (eventMeta.description !== null && eventMeta.description !== undefined) {
-          console.log(eventMeta);
           eventMeta.description = eventMeta.description.replace(/<\/?span>/g, '');
           try {
             blockId = JSON.parse(eventMeta.description).blockId;

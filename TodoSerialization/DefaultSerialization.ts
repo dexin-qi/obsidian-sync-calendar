@@ -112,6 +112,7 @@ export class TodoRegularExpressions {
   // description: '#dog #car http://www/ddd#ere #house'
   // matches: #dog, #car, #house
   public static readonly hashTags = /(^|\s)#[^ !@#$%^&*(),.?":{}|<>]*/g;
+  public static readonly hashTagsFloating = new RegExp(this.hashTags.source);
   public static readonly hashTagsFromEnd = new RegExp(this.hashTags.source + '$');
 }
 
@@ -260,9 +261,9 @@ export class DefaultTodoSerializer implements TodoSerializer {
 
       // Match tags from the end to allow users to mix the various todo components with
       // tags. These tags will be added back to the description below
-      const tagsMatch = line.match(TodoRegularExpressions.hashTagsFromEnd);
+      const tagsMatch = line.match(TodoRegularExpressions.hashTagsFloating);
       if (tagsMatch != null) {
-        line = line.replace(TodoRegularExpressions.hashTagsFromEnd, '').trim();
+        line = line.replace(TodoRegularExpressions.hashTagsFloating, '').trim();
         matched = true;
         const tagName = tagsMatch[0].trim();
         // Adding to the left because the matching is done right-to-left
