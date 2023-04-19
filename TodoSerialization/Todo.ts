@@ -96,8 +96,15 @@ export class Todo {
     });
   }
 
-  // TODO: isOverdue 
-  public isOverdue(): boolean { return false; }
+  public isOverdue(): boolean {
+    if (this.dueDateTime) {
+      console.log(this.dueDateTime);
+      console.log(`isOverdue: ${window.moment().isAfter(this.dueDateTime)}`);
+      return window.moment().isAfter(this.dueDateTime);
+    }
+    console.log('dueDateTime none');
+    return false;
+  }
 
   static isDatetime(datatimeString: string): boolean {
     const regDateTime = /(\d{4}-\d{2}-\d{2}T)/u;

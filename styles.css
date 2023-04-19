@@ -21,6 +21,31 @@ If your plugin does not need CSS, delete this file.
   --gray-8: #a9b8e8;
   --gray-9: #b4c2f0;
   --gray-10: #c8d3f5;
+
+  --dark-red: #ff5370;
+  --red: #ff757f;
+  --light-red: #ff98a4;
+  --orange: #ff966c;
+  --dark-orange: #fc7b7b;
+  --yellow: #ffc777;
+  --green: #c3e88d;
+  --teal: #4fd6be;
+  --aqua: #50c4fa;
+  --cyan: #86e1fc;
+  --cyan-alt: #b4f9f8;
+  --sky-blue: #65bcff;
+  --blue: #82aaff;
+  --dark-blue: #3e68d7;
+  --pink: #fca7ea;
+  --purple: #c099ff;
+  --indigo: #7a88cf;
+
+  --text-light: #e2e8fa;
+  --text-primary: #c8d3f5;
+  --text-paragraph: #c0cdf3;
+  --text-secondary: #b4c2f0;
+  --text-gray: #a9b8e8;
+  --text-dark: #828bb8;
 }
 
 .todo-list-query-title {
@@ -97,6 +122,8 @@ ul.todo-list-todo-list {
 }
 
 .theme-dark {
+  --todo-overdue: rgba(254, 158, 169, 0.85);
+
   --todo-list-p1-border: #ff7066;
   --todo-list-p1-border-hover: #ff706680;
   --todo-list-p1-background: rgba(255, 112, 102, .1);
@@ -115,6 +142,8 @@ ul.todo-list-todo-list {
 }
 
 .theme-light {
+  --todo-overdue: rgba(213, 77, 92, 0.8);;
+
   --todo-list-p1-border: #d1453b;
   --todo-list-p1-border-hover: #d1453b80;
   --todo-list-p1-background: rgba(209, 69, 59, .1);
@@ -196,7 +225,7 @@ p.sync-calendar-setting-header-description {
 }
 
 .todo-date.todo-overdue {
-  color: rgba(var(--light-red), 0.75) !important;
+  color: var(--todo-overdue) !important;
 }
 
 .todo-calendar-icon,
@@ -228,8 +257,8 @@ p.sync-calendar-setting-header-description {
 }
 
 .todo-list-error {
-  border: 1px solid #d1453b;
-  background-color: rgba(#d1453b, 0.05);
+  border: 1px solid var(--light-red);
+  background-color: rgba(255, 152, 164, 0.05);
   padding: 1em 1em;
   margin: 1em 0px;
 }
