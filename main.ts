@@ -263,24 +263,44 @@ export default class SyncCalendarPlugin extends Plugin {
     if (!apiIsReady) {
       return;
     }
-    const originNeedToPath = this.calendarSync.doneEventsQueue.length;
-    if (originNeedToPath <= 0) {
-      return;
+
+    const originNeedToPatch = this.calendarSync.doneEventsQueue.length;
+    if (originNeedToPatch > 0) {
+      this.syncStatusItem.setText("Sync: 🔼");
+      this.calendarSync.doneEventsQueue.refresh()
+        .then((isAllSucc) => {
+          if (isAllSucc) {
+            this.netStatus = NetworkStatus.HEALTH;
+            this.syncStatusItem.setText("Sync: 🆗");
+            console.info(
+              `Successfully Patched ${originNeedToPatch - this.calendarSync.doneEventsQueue.length
+              } events!`
+            );
+          } else {
+            this.syncStatusItem.setText("Sync: 🆖");
+          }
+        })
+        .catch((err) => { this.syncStatusItem.setText("Sync: 🆖"); });
     }
 
-    this.syncStatusItem.setText("Sync: ⬆️");
-    this.calendarSync.doneEventsQueue.refresh().then((isAllSucc) => {
-      if (isAllSucc) {
-        this.netStatus = NetworkStatus.HEALTH;
-        this.syncStatusItem.setText("Sync: 🆗");
-        console.info(
-          `Successfully Patched ${originNeedToPath - this.calendarSync.doneEventsQueue.length
-          } events!`
-        );
-      } else {
-        this.syncStatusItem.setText("Sync: 🆖");
-      }
-    });
+    const originNeedToDelete = this.calendarSync.deleteEventsQueue.length;
+    if (originNeedToDelete > 0) {
+      this.syncStatusItem.setText("Sync: 🔼");
+      this.calendarSync.deleteEventsQueue.refresh()
+        .then((isAllSucc) => {
+          if (isAllSucc) {
+            this.netStatus = NetworkStatus.HEALTH;
+            this.syncStatusItem.setText("Sync: 🆗");
+            console.info(
+              `Successfully Deleted ${originNeedToDelete - this.calendarSync.deleteEventsQueue.length
+              } events!`
+            );
+          } else {
+            this.syncStatusItem.setText("Sync: 🆖");
+          }
+        })
+        .catch((err) => { this.syncStatusItem.setText("Sync: 🆖"); });
+    }
   }
 
   async loadSettings() {
@@ -318,7 +338,6 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       "Proxy Settings",
       "The Proxy Settings to use when syncing with calendar. \u26A0\ufe0fYou will need to RESTART Obsidian after setting this! \u26A0\ufe0f"
     );
-
 
     // Proxy enabled checkbox
     this.proxyEnabledCheckbox = new Setting(containerEl)

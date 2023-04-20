@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { Menu, Notice, MarkdownRenderer, Plugin } from "obsidian";
-	import type SyncCalendarPluginSettings from "main";
 	import { onMount } from "svelte";
 	import { fade } from "svelte/transition";
 
+	import type SyncCalendarPluginSettings from "main";
 	import { Todo } from "../TodoSerialization/Todo";
 	import { openExternal } from "../lib/OpenExternal";
+	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
 
-	export let onClickTask: (todo: Todo) => Promise<void>;
-	export let todo: Todo;
+	export let api: GoogleCalendarSync;
 	export let settings: SyncCalendarPluginSettings;
+	export let todo: Todo;
+	// export let refreshWholeList: () => Promise<void>;
 
 	$: disable = false;
 
@@ -59,11 +61,13 @@
 		return "todo-list-p4";
 	}
 
+	async function onClickTask(todo: Todo) {
+		api.doneEventsQueue.enqueue(todo);
+	}
+
 	function onClickTaskContainer(evt: MouseEvent) {
 		evt.stopPropagation();
 		evt.preventDefault();
-
-		console.log("show todo's details");
 
 		let menu = new Menu();
 
@@ -72,7 +76,7 @@
 				.setTitle("Delete todo")
 				.setIcon("popup-open")
 				.onClick(() => {
-					// plugin.deleteQueue.enqueue(todo);
+					api.deleteEventsQueue.enqueue(todo);
 				})
 		);
 

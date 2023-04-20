@@ -19,11 +19,9 @@
 	let eventsList: Todo[] = [];
 
 	let autoRefreshIntervalId: null | number = null;
-	let autoPatchIntervalId: number;
 
 	let error_info: null | Error = null;
 	let fetchedOnce = false;
-	let refreshTimes = 1;
 	let eventsListTitle = "TODOs in Calendar";
 
 	$: {

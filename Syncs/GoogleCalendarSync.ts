@@ -11,6 +11,7 @@ export default class GoogleCalendarSync {
   vault: Vault;
 
   public doneEventsQueue: ConcurrentQueue<Todo>;
+  public deleteEventsQueue: ConcurrentQueue<Todo>;
 
   // If modifying these scopes, delete token.json.
   public SCOPES = ['https://www.googleapis.com/auth/calendar'];
@@ -27,6 +28,7 @@ export default class GoogleCalendarSync {
     this.CREDENTIALS_PATH = path.join(vault.configDir, 'calendar.sync.credentials.json');
 
     this.doneEventsQueue = new ConcurrentQueue<Todo>(this.patchEventToDone.bind(this));
+    this.deleteEventsQueue = new ConcurrentQueue<Todo>(this.deleteEvent.bind(this));
   }
 
 
@@ -204,25 +206,62 @@ export default class GoogleCalendarSync {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
 
-    let retryTimes = 0;
-    let isInsertSuccess = false;
-
     todo.eventStatus = 'done';
     const eventDescUpdate = todo.serializeDescription();
 
-    while (retryTimes < 20 && !isInsertSuccess) {
+    let retryTimes = 0;
+    let isPatchSuccess = false;
+    while (retryTimes < 20 && !isPatchSuccess) {
       ++retryTimes;
 
       await this.patchEvent(calendar, auth, todo.eventId, { "description": eventDescUpdate, })
         .then(() => {
-          isInsertSuccess = true;
+          isPatchSuccess = true;
           console.info(`Patched event: ${todo.content}!`);
         }).catch(async (error) => {
           console.error('Error on patching event:', error);
           await new Promise(resolve => setTimeout(resolve, 100));
         });
     }
-    return isInsertSuccess;
+    return isPatchSuccess;
+  }
+
+  async deleteEvent(todo: Todo): Promise<boolean> {
+    let auth = await this.authorize();
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    let retryTimes = 0;
+    let isDeleteSuccess = false;
+    while (retryTimes < 20 && !isDeleteSuccess) {
+      ++retryTimes;
+
+      console.info(`Deleting event: ${todo.content}`);
+
+      // await new Promise(async (resolve, reject) => {
+
+      //   await calendar.events.delete({
+      //     auth: auth,
+      //     calendarId: 'primary',
+      //     eventId: todo.eventId,
+      //   }, function (err, res) {
+      //     if (err) {
+      //       reject(err);
+      //     } else {
+      //       resolve(res);
+      //     }
+      //   })
+      // })
+      await calendar.events
+        .delete({ auth: auth, calendarId: 'primary', eventId: todo.eventId })
+        .then(() => {
+          isDeleteSuccess = true;
+          console.info(`Deleted event: ${todo.content}!`);
+        }).catch(async (err) => {
+          console.error('Error on delete event:', err);
+          await new Promise(resolve => setTimeout(resolve, 100));
+        });
+    }
+    return isDeleteSuccess;
   }
 
   private async insertEvent(calendar, auth, eventMeta) {
@@ -257,6 +296,8 @@ export default class GoogleCalendarSync {
       })
     });
   }
+
+
 
   async isReady(): Promise<boolean> {
     const client = await this.loadSavedCredentialsIfExist();
