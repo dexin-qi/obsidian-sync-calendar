@@ -93,58 +93,61 @@ export default class ObsidianTasksSync {
     });
   }
 
-  public fetchTodos(): Todo[] | Error {
+  public fetchTodos(keyMoment: moment.Moment, timeWindowBiasAhead: moment.Duration): Todo[] {
     let ob_todos: Todo[] = [];
 
-    try {
-      const dv = this.app.plugins.plugins.dataview.api;
-      const queried_tasks = dv.pages().file.tasks
-        .where(task => {
-          return !task.completed;
-        })
-        .where(task => {
-          return task.text.match(/🛫+ \d{4}-\d{2}-\d{2}/u)?.index > 0;
-        });
+    const startMoment = keyMoment.subtract(timeWindowBiasAhead);
 
-      queried_tasks.values.forEach(async (task) => {
-        //  对抓取到的 tasks，没有指定 blockId 需要创建 hashed blockId。
-        if (!(task.blockId?.length > 0)) {
-          const hash = crypto.createHash("sha256").update(task.text).digest();
-          let shorternTaskHash = parseInt(hash.toString("hex").slice(0, 16), 16).toString(36).toUpperCase();
-          // TODO: 判断重复性 task id 的重复性
-          shorternTaskHash = shorternTaskHash.padStart(8, "0");
+    const dv = this.app.plugins.plugins.dataview.api;
+    const queried_tasks = dv.pages().file.tasks
+      .where(task => {
+        return !task.completed;
+      })
+      .where(task => {
+        return task.text.match(/🛫+ \d{4}-\d{2}-\d{2}/u)?.index > 0;
+      });
 
-          this.fileMutex.runExclusive(async () => {
-            const file = this.app.vault.getAbstractFileByPath(task.path);
-            if (!(file instanceof TFile)) {
-              new Notice(`Calendar-Sync: No file found for task ${task.text}. Retrying ...`);
-              return Error(`No file found for task ${task.text}`);
-            }
+    queried_tasks.values.forEach(async (task) => {
+      //  对抓取到的 tasks，没有指定 blockId 需要创建 hashed blockId。
+      let todo_details: TodoDetails | null = null;
+      if (task.blockId?.length > 0) {
+        todo_details = this.deserializer.deserialize(task.text);
+      } else {
+        const hash = crypto.createHash("sha256").update(task.text).digest();
+        let shorternTaskHash = parseInt(hash.toString("hex").slice(0, 16), 16).toString(36).toUpperCase();
+        // TODO: 判断重复性 task id 的重复性
+        shorternTaskHash = shorternTaskHash.padStart(8, "0");
 
-            // TODO: 替换为 vault.process
-            const fileContent = await self.app.vault.read(file);
-            const fileLines = fileContent.split('\n');
+        this.fileMutex.runExclusive(async () => {
+          const file = this.app.vault.getAbstractFileByPath(task.path);
+          if (!(file instanceof TFile)) {
+            new Notice(`Calendar-Sync: No file found for task ${task.text}. Retrying ...`);
+            return;
+          }
 
-            const updatedFileLines = [
-              ...fileLines.slice(0, task.position.start.line),
-              `${fileLines[task.position.start.line]} ^${shorternTaskHash}`,
-              ...fileLines.slice(task.position.start.line + 1),
-            ];
+          // TODO: 替换为 vault.process
+          const fileContent = await self.app.vault.read(file);
+          const fileLines = fileContent.split('\n');
 
-            await self.app.vault.modify(file, updatedFileLines.join('\n'));
+          const updatedFileLines = [
+            ...fileLines.slice(0, task.position.start.line),
+            `${fileLines[task.position.start.line]} ^${shorternTaskHash}`,
+            ...fileLines.slice(task.position.start.line + 1),
+          ];
 
-          }); // file modification mutex.
+          await self.app.vault.modify(file, updatedFileLines.join('\n'));
+        }); // file modification mutex.
+        todo_details = this.deserializer.deserialize(`${task.text} ^${shorternTaskHash}`);
+      }
 
-          const todo_details: TodoDetails = this.deserializer.deserialize(`${task.text} ^${shorternTaskHash}`);
-          ob_todos.push(new Todo({ ...todo_details, path: task.path }));
-        } else {
-          const todo_details: TodoDetails = this.deserializer.deserialize(task.text);
-          ob_todos.push(new Todo({ ...todo_details, path: task.path }));
-        }
-      }); // queried_tasks <for each>
-    } catch (e) {
-      return Error(`Calendar-Sync: fetch obsidian todos: ${e}`);
-    }
+      const todo = new Todo({ ...todo_details, path: task.path });
+      if (window.moment(todo.startDateTime!).isBefore(startMoment)) {
+        return;
+      }
+      
+      ob_todos.push(todo);
+    }); // queried_tasks <for each>
+
 
     return ob_todos;
   }

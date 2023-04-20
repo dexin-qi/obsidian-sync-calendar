@@ -32,23 +32,24 @@ export default class GoogleCalendarSync {
   }
 
 
-  async fetchTodos(numberWeeksAgo: number = 4, max_results: number = 20): Promise<Todo[]> {
+  async fetchTodos(keyMoment: moment.Moment, timeWindowBiasAhead: moment.Duration, max_results: number = 20): Promise<Todo[]> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
 
     let eventsMetaList: any[] | undefined = undefined;
 
-    const weeksAgo = window.moment.duration(numberWeeksAgo, "weeks");
-    const startMoment = window.moment().startOf('day').subtract(weeksAgo);
+    const startMoment = keyMoment.subtract(timeWindowBiasAhead);
     // console.debug(startMoment.toISOString());
 
+    // TODO: fetch none networks
     const eventsListQueryResult = await calendar.events.list({
       calendarId: 'primary',
       timeMin: startMoment.toISOString(),
       maxResults: max_results,
       singleEvents: true,
       orderBy: 'startTime',
-    });
+    }).catch(err => { throw err; });
+
     eventsMetaList = eventsListQueryResult.data.items;
 
     // CalUID 和 id 的区别: 在重复发生的事件中，

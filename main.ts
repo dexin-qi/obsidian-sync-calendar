@@ -146,7 +146,12 @@ export default class SyncCalendarPlugin extends Plugin {
   private async syncWithCalendar() {
     this.syncStatusItem.setText('Sync: 🔄');
 
-    let obsidianTodos = this.obsidianSync.fetchTodos();
+
+    let obsidianTodos = this.obsidianSync.fetchTodos(
+      window.moment().startOf('day'),
+      window.moment.duration(this.settings.fetchWeeksAgo, "weeks"),
+    );
+
     let obsidianTodosBlockIds: string[] = [];
     if (obsidianTodos instanceof Error) {
       new Notice("Error on fetch Obsidain tasks");
@@ -158,10 +163,12 @@ export default class SyncCalendarPlugin extends Plugin {
       }
     });
 
-    let calendarTodos: Todo[] = await this.calendarSync.fetchTodos(
-      this.settings.fetchWeeksAgo,
+    let calendarTodos = await this.calendarSync.fetchTodos(
+      window.moment().startOf('day'),
+      window.moment.duration(this.settings.fetchWeeksAgo, "weeks"),
       this.settings.fetchMaximumEvents
-    );
+    ).catch(err => { throw err; });
+
     let calendarTodosBlockIds: string[] = [];
     calendarTodos.map((todo) => {
       if (todo.blockId !== null && todo.blockId !== undefined) {

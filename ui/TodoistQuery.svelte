@@ -56,7 +56,8 @@
 
 		const fetchPromise = api
 			.fetchTodos(
-				plugin.settings.fetchWeeksAgo,
+				window.moment().startOf("day"),
+				window.moment.duration(plugin.settings.fetchWeeksAgo, "weeks"),
 				plugin.settings.fetchMaximumEvents
 			)
 			.then((newEventsList) => {
@@ -71,17 +72,18 @@
 			.catch((err) => {
 				console.error(err);
 				plugin.netStatus = NetworkStatus.CONNECTION_ERROR;
-				throw new Error(
-					"Connection failed, \
-          cannot fetch events from Google calendar."
-				);
+				throw new err;
+        // Error(
+				// 	"We are currently unable to \
+        //   fetch events list from Google calendar."
+				// );
 			});
 
 		const timeoutPromise = new Promise((resolve, reject) => {
 			setTimeout(() => {
 				reject(
 					new Error(
-						"Fetch from Google calendar timeout! \
+						"Timeout occurred when fetching from Google Calendar! \
             Check your connection and proxy settings, \
             then restart Obsidian."
 					)
