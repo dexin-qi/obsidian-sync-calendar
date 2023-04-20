@@ -103,7 +103,11 @@ export class Todo {
 
   public isOverdue(): boolean {
     if (this.dueDateTime) {
-      return window.moment().isAfter(this.dueDateTime);
+      if (Todo.isDatetime(this.dueDateTime)) {
+        return window.moment().isAfter(this.dueDateTime);
+      } else {
+        return window.moment().startOf('day').isAfter(this.dueDateTime);
+      }
     }
     return false;
   }
