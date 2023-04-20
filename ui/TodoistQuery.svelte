@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type SyncCalendarPluginSettings from "main";
 	import type SyncCalendarPlugin from "main";
 	import { NetworkStatus } from "Syncs/StatusEnumerate";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
@@ -13,7 +12,6 @@
 
 	export let plugin: SyncCalendarPlugin;
 	export let api: GoogleCalendarSync;
-	export let settings: SyncCalendarPluginSettings;
 
 	let fetching = false;
 	let eventsList: Todo[] = [];
@@ -72,10 +70,10 @@
 			.catch((err) => {
 				console.error(err);
 				plugin.netStatus = NetworkStatus.CONNECTION_ERROR;
-				throw new err;
-        // Error(
+				throw new err();
+				// Error(
 				// 	"We are currently unable to \
-        //   fetch events list from Google calendar."
+				//   fetch events list from Google calendar."
 				// );
 			});
 
@@ -137,7 +135,7 @@
 		{#if eventsList.length == 0}
 			<NoTaskDisplay />
 		{:else}
-			<TaskList {api} {settings} todoList={eventsList} />
+			<TaskList {api} {plugin} todoList={eventsList} />
 		{/if}
 	{/if}
 </div>

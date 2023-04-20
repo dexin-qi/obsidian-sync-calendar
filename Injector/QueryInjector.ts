@@ -15,17 +15,12 @@ import ErrorDisplay from "../ui/ErrorDisplay.svelte";
 
 export default class QueryInjector {
   private pendingQueries: PendingQuery[];
-    
-  private settings: SyncCalendarPluginSettings;
   
   private plugin: SyncCalendarPlugin;
-  private app: App;
   private calendarSync: GoogleCalendarSync;
 
   constructor(plugin: SyncCalendarPlugin) {
     this.plugin = plugin;
-    this.app = plugin.app;
-    this.settings = plugin.settings;
     this.pendingQueries = [];
   }
 
@@ -37,7 +32,7 @@ export default class QueryInjector {
     };
     // console.log('source: ' + source);
     // console.log('target: ' + el);
-    // console.log('ctx: ' + ctx);
+    console.log('ctx: ' + ctx);
 
     if (typeof this.calendarSync == "undefined") {
       this.pendingQueries.push(pendingQuery);
@@ -63,7 +58,6 @@ export default class QueryInjector {
         props: {
           plugin: this.plugin,
           api: this.calendarSync,
-          settings: this.settings,
         },
       });
     });

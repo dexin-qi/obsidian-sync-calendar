@@ -1,48 +1,43 @@
 <script lang="ts">
-	import { Menu, Notice, MarkdownRenderer, Plugin } from "obsidian";
-	import { onMount } from "svelte";
+	import { Menu } from "obsidian";
 	import { fade } from "svelte/transition";
+	import { writable } from "svelte/store";
 
-	import type SyncCalendarPluginSettings from "main";
+	import type SyncCalendarPlugin from "main";
 	import { Todo } from "../TodoSerialization/Todo";
 	import { openExternal } from "../lib/OpenExternal";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
+	import { contentStore } from "./ContentStore";
+
+	import MarkdownRenderer from "./MarkdownRenderer.svelte";
 
 	export let api: GoogleCalendarSync;
-	export let settings: SyncCalendarPluginSettings;
+	export let plugin: SyncCalendarPlugin;
 	export let todo: Todo;
 	// export let refreshWholeList: () => Promise<void>;
 
 	$: disable = false;
-
-	let taskContentEl: HTMLDivElement;
-
-	onMount(async () => {
-		await renderMarkdown(todo.content!);
-	});
-
-	async function renderMarkdown(content: string): Promise<void> {
-		// Escape leading '#' or '-' so they aren't rendered as headers/bullets.
-		if (content.startsWith("#") || content.startsWith("-")) {
-			content = `\\${content}`;
+	$: {
+		if (
+			!contentStore.has(todo.eventId!) ||
+			contentStore.get(todo.eventId!) == undefined ||
+			contentStore.get(todo.eventId!) == null
+		) {
+			contentStore.set(todo.eventId!, writable("None"));
 		}
-
-		// A todo starting with '*' signifies that it cannot be completed, so we should strip it from the front of the todo.
-		if (content.startsWith("*")) {
-			content = content.substring(1);
-		}
-
-		await MarkdownRenderer.renderMarkdown(content, taskContentEl, "", null);
-
-		// Remove the wrapping '<p>' tag to force it to inline.
-		const markdownContent = taskContentEl.querySelector("p");
-
-		if (markdownContent) {
-			markdownContent.parentElement.removeChild(markdownContent);
-			taskContentEl.innerHTML += markdownContent.innerHTML;
+		let ct = contentStore.get(todo.eventId!);
+		if (ct !== undefined) {
+			ct.set(getTodoContent(todo));
 		}
 	}
 
+	function getTodoContent(todo: Todo): string {
+		// console.log(todo);
+		if (todo.content) {
+			return todo.content;
+		}
+		return "Invalid Todo Title";
+	}
 	// For some reason, the Todoist API returns priority in reverse order from
 	// the p1/p2/p3/p4 fluent entry notation.
 	function getPriorityClass(priority: null | undefined | string): string {
@@ -132,12 +127,15 @@
 				await onClickTask(todo);
 			}}
 		/>
-		<div bind:this={taskContentEl} class="todo-list-todo-content" />
+		<MarkdownRenderer
+			class="todo-list-todo-content"
+			eventId={todo.eventId}
+		/>
 	</div>
 	<div class="todo-metadata">
-		<!-- {#if settings.renderProject && renderProject}
+		<!-- {#if plugin.settings.renderProject && renderProject}
 			<div class="todo-project">
-				{#if settings.renderProjectIcon}
+				{#if plugin.settings.renderProjectIcon}
 					<svg
 						class="todo-project-icon"
 						xmlns="http://www.w3.org/2000/svg"
@@ -164,7 +162,7 @@
 				{/if}
 			</div>
 		{/if} -->
-		{#if settings.renderDate && todo.startDateTime}
+		{#if plugin.settings.renderDate && todo.startDateTime}
 			<div class="todo-date {todo.isOverdue() ? 'todo-overdue' : ''}">
 				<svg
 					class="todo-calendar-icon"
@@ -181,7 +179,7 @@
 				{Todo.momentString(todo.startDateTime, "🛫")}
 			</div>
 		{/if}
-		{#if settings.renderTags && todo.tags !== undefined && todo.tags?.length > 0}
+		{#if plugin.settings.renderTags && todo.tags !== undefined && todo.tags?.length > 0}
 			<div class="todo-labels">
 				<svg
 					class="todo-labels-icon"
@@ -205,13 +203,4 @@
 			</div>
 		{/if}
 	</div>
-	<!-- {#if todo.children.length != 0}
-		<TaskList
-			tasks={todo.children}
-			{settings}
-			{api}
-			{sorting}
-			{renderProject}
-		/>
-	{/if} -->
 </li>
