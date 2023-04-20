@@ -15,10 +15,11 @@ export class Todo {
 
   public calUId?: null | string | undefined;
   public eventId?: null | string | undefined;
+  public eventStatus?: null | string | undefined;
+  public eventHtmlLink?: null | string | undefined;
 
   public path?: string | undefined;
   public blockId?: null | string | undefined;
-  public eventStatus?: null | string | undefined;
 
   public updated?: null | string | undefined;
 
@@ -35,7 +36,8 @@ export class Todo {
     eventStatus,
     updated,
     calUId,
-    eventId
+    eventId,
+    eventHtmlLink
   }: {
     content: null | string | undefined;
     priority?: null | string | undefined;
@@ -50,6 +52,7 @@ export class Todo {
     updated?: null | string | undefined;
     calUId?: null | string | undefined;
     eventId?: null | string | undefined;
+    eventHtmlLink?: null | string | undefined;
   }) {
     this.content = content;
 
@@ -67,6 +70,7 @@ export class Todo {
 
     this.calUId = calUId;
     this.eventId = eventId;
+    this.eventHtmlLink = eventHtmlLink;
 
     this.updated = updated;
   }
@@ -83,6 +87,7 @@ export class Todo {
     if (todo.blockId) { this.blockId = todo.blockId; }
     if (todo.eventStatus) { this.eventStatus = todo.eventStatus; }
     if (todo.calUId) { this.calUId = todo.calUId; }
+    if (todo.eventHtmlLink) { this.eventHtmlLink = todo.eventHtmlLink; }
     if (todo.eventId) { this.eventId = todo.eventId; }
     if (todo.updated) { this.updated = todo.updated; }
   }
@@ -98,11 +103,8 @@ export class Todo {
 
   public isOverdue(): boolean {
     if (this.dueDateTime) {
-      console.log(this.dueDateTime);
-      console.log(`isOverdue: ${window.moment().isAfter(this.dueDateTime)}`);
       return window.moment().isAfter(this.dueDateTime);
     }
-    console.log('dueDateTime none');
     return false;
   }
 

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { Menu, Notice, MarkdownRenderer } from "obsidian";
+	import { Menu, Notice, MarkdownRenderer, Plugin } from "obsidian";
 	import type SyncCalendarPluginSettings from "main";
 	import { onMount } from "svelte";
 	import { fade } from "svelte/transition";
 
 	import { Todo } from "../TodoSerialization/Todo";
-	// import TaskList from "./TaskList.svelte";
+	import { openExternal } from "../lib/OpenExternal";
 
 	export let onClickTask: (todo: Todo) => Promise<void>;
 	export let todo: Todo;
@@ -65,37 +65,46 @@
 
 		console.log("show todo's details");
 
-		new Menu()
-			.addItem((menuItem) =>
-				menuItem
-					.setTitle("Delete todo")
-					.setIcon("popup-open")
-					.onClick(() => {})
-			)
-			.addItem((menuItem) =>
-				menuItem
-					.setTitle("Edit todo in obsidian")
-					.setIcon("popup-open")
-					.onClick(() => {})
-			)
-			.addItem((menuItem) =>
+		let menu = new Menu();
+
+		menu.addItem((menuItem) =>
+			menuItem
+				.setTitle("Delete todo")
+				.setIcon("popup-open")
+				.onClick(() => {
+					// plugin.deleteQueue.enqueue(todo);
+				})
+		);
+
+		// menu.addItem((menuItem) =>
+		// 	menuItem
+		// 		.setTitle("Edit todo in obsidian")
+		// 		.setIcon("popup-open")
+		// 		.onClick(() => {})
+		// );
+
+		if (todo.eventHtmlLink) {
+			menu.addItem((menuItem) =>
 				menuItem
 					.setTitle("Edit todo in calendar (web)")
 					.setIcon("popup-open")
-					.onClick(() => {})
-			)
-			.showAtPosition({
-				x: evt.pageX,
-				y: evt.pageY,
-			});
+					.onClick(() => {
+						const regExp = /eid=([^&]+)/;
+						const match = todo.eventHtmlLink!.match(regExp);
+						if (match) {
+							const eid = match[1];
+							const editLink = `https://calendar.google.com/calendar/u/0/r/eventedit/${eid}`;
+							console.log(`open ${editLink}`);
+							openExternal(editLink);
+						}
+					})
+			);
+		}
 
-		// showTaskContext(
-		// 	{
-		// 		todo: todo,
-		// 		onClickTask: onClickTask,
-		// 	},
-
-		// );
+		menu.showAtPosition({
+			x: evt.pageX,
+			y: evt.pageY,
+		});
 	}
 </script>
 

@@ -57,9 +57,14 @@ export default class GoogleCalendarSync {
     let eventsList: Todo[] = [];
     if (eventsMetaList != undefined) {
       eventsMetaList.forEach((eventMeta) => {
+        if (eventMeta.kind !== "calendar#event") {
+          return;
+        }
+
         let content = eventMeta.summary;
         let calUId = eventMeta.iCalUID;
         let eventId = eventMeta.id;
+        let eventHtmlLink = eventMeta.htmlLink;
         let eventStatus = "";
         let blockId = undefined;
         let priority = undefined;
@@ -113,6 +118,7 @@ export default class GoogleCalendarSync {
             calUId,
             eventId,
             eventStatus,
+            eventHtmlLink,
             updated,
             tags
           })
