@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Menu } from "obsidian";
+	import { Menu, Notice } from "obsidian";
 	import { fade } from "svelte/transition";
 	import { writable } from "svelte/store";
 
@@ -59,7 +59,7 @@
 	async function onClickTask(todo: Todo) {
 		api.doneEventsQueue.enqueue(todo);
 		//TODO: move this to queue operation
-		console.log(todo);
+		// console.log(todo);
 		if (todo.path && todo.path !== null && todo.path !== undefined) {
 			if (
 				todo.blockId &&
@@ -88,7 +88,7 @@
 						todo.path !== null &&
 						todo.path !== undefined
 					) {
-            // FIXME: if user sync -> refresh -> move todo to another line 
+						// FIXME: if user sync -> refresh -> move todo to another line
 						if (
 							todo.blockId &&
 							todo.blockId !== null &&
@@ -118,8 +118,9 @@
 						if (match) {
 							const eid = match[1];
 							const editLink = `https://calendar.google.com/calendar/u/0/r/eventedit/${eid}`;
-							console.log(`open ${editLink}`);
 							openExternal(editLink);
+						} else {
+							openExternal(todo.eventHtmlLink!);
 						}
 					})
 			);

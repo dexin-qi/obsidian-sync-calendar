@@ -2,7 +2,7 @@
 	import type SyncCalendarPlugin from "main";
 	import { NetworkStatus } from "Syncs/StatusEnumerate";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
-	import type { Todo } from "TodoSerialization/Todo";
+	import { Todo } from "TodoSerialization/Todo";
 
 	import { onMount, onDestroy } from "svelte";
 
@@ -10,17 +10,49 @@
 	import TaskList from "./TaskList.svelte";
 	import NoTaskDisplay from "./NoTaskDisplay.svelte";
 
+	import type { Query } from "Injector/Query";
+
 	export let plugin: SyncCalendarPlugin;
 	export let api: GoogleCalendarSync;
+	export let query: Query;
 
 	let fetching = false;
 	let eventsList: Todo[] = [];
+	let todos: Todo[] = [];
+
+	$: todos = filterTodos(eventsList);
+
+	function filterTodos(todoList: Todo[]) {
+		if (query && query.timeMax) {
+			return todoList.filter((todo: Todo) => {
+				if (Todo.isDatetime(todo.startDateTime!)) {
+					return window
+						.moment(query.timeMax)
+						.isAfter(window.moment(todo.startDateTime));
+				} else {
+					return window
+						.moment(query.timeMax)
+						.isAfter(window.moment(todo.startDateTime));
+				}
+			});
+		}
+		return todoList;
+	}
 
 	let autoRefreshIntervalId: null | number = null;
 
 	let error_info: null | Error = null;
 	let fetchedOnce = false;
-	let eventsListTitle = "TODOs in Calendar";
+	let eventsListTitle: string;
+
+	$: eventsListTitle =
+		query !== undefined && query.name
+			? query.name
+			: "{number} todos in Calendar";
+
+	$: {
+		console.log(query);
+	}
 
 	$: {
 		if (autoRefreshIntervalId == null) {
@@ -53,11 +85,20 @@
 		plugin.syncStatusItem.setText("Sync: 🔽");
 
 		const fetchPromise = plugin
-			.fetchFullTodos
-			// window.moment().startOf("day"),
-			// window.moment.duration(plugin.settings.fetchWeeksAgo, "weeks"),
-			// plugin.settings.fetchMaximumEvents
-			()
+			.fetchFullTodos(
+				query && query.timeMin
+					? window.moment(query.timeMin)
+					: window.moment().startOf("day"),
+				query && query.timeMin
+					? window.moment.duration(0)
+					: window.moment.duration(
+							plugin.settings.fetchWeeksAgo,
+							"weeks"
+					  ),
+				query && query.maxEvents
+					? query.maxEvents
+					: plugin.settings.fetchMaximumEvents
+			)
 			.then((newEventsList) => {
 				eventsList = newEventsList;
 				fetchedOnce = true;
@@ -104,10 +145,11 @@
 </script>
 
 <div>
-	<h4 class="todo-list-query-title">
-		{eventsList.length}
-		{eventsListTitle}
-	</h4>
+	{#if eventsListTitle.length > 0}
+		<h4 class="todo-list-query-title">
+			{eventsListTitle.replace("{numberTodo}", todos.length.toString())}
+		</h4>
+	{/if}
 	<button
 		class="todo-list-refresh-button"
 		on:click={async () => {
@@ -135,7 +177,7 @@
 		{#if eventsList.length == 0}
 			<NoTaskDisplay />
 		{:else}
-			<TaskList {api} {plugin} todoList={eventsList} />
+			<TaskList {api} {plugin} {todos} />
 		{/if}
 	{/if}
 </div>

@@ -143,10 +143,13 @@ export default class SyncCalendarPlugin extends Plugin {
 
   }
 
-  public async fetchFullTodos(): Promise<Todo[]> {
+  public async fetchFullTodos(keyMoment: moment.Moment, timeWindowBiasAhead: moment.Duration, max_results: number = 20): Promise<Todo[]> {
+    console.log(keyMoment);
+    console.log(timeWindowBiasAhead);
+    console.log(max_results);
     let obsidianTodos = this.obsidianSync.fetchTodos(
-      window.moment().startOf('day'),
-      window.moment.duration(this.settings.fetchWeeksAgo, "weeks"),
+      keyMoment,
+      timeWindowBiasAhead
     );
 
     let obsidianTodosBlockIds: string[] = [];
@@ -161,9 +164,9 @@ export default class SyncCalendarPlugin extends Plugin {
     });
 
     let calendarTodos = await this.calendarSync.fetchTodos(
-      window.moment().startOf('day'),
-      window.moment.duration(this.settings.fetchWeeksAgo, "weeks"),
-      this.settings.fetchMaximumEvents
+      keyMoment,
+      timeWindowBiasAhead,
+      max_results
     ).catch(err => { throw err; });
 
     let calendarTodosBlockIds: string[] = [];

@@ -1,17 +1,17 @@
 <script lang="ts">
 	import type SyncCalendarPlugin from "main";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
-	import type { Todo } from "TodoSerialization/Todo";
+	import { Todo } from "TodoSerialization/Todo";
+	import type { Query } from "Injector/Query";
 
 	import TaskRenderer from "./TaskRenderer.svelte";
 	import NoTaskDisplay from "./NoTaskDisplay.svelte";
 
 	export let api: GoogleCalendarSync;
 	export let plugin: SyncCalendarPlugin;
-	export let todoList: Todo[];
+	export let todos: Todo[];
 
-	$: todos = todoList;
-
+	
 </script>
 
 {#if todos.length != 0}

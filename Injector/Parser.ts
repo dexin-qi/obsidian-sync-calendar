@@ -1,5 +1,5 @@
-import { isSortingOption, sortingOptions } from "./query";
-import type { Query } from "./query";
+import { isSortingOption, sortingOptions } from "./Query";
+import type { Query } from "./Query";
 import YAML from "yaml";
 
 export class ParsingError extends Error {
@@ -52,19 +52,38 @@ function tryParseAsYaml(raw: string): any {
 }
 
 function parseObject(query: any): Query {
-  if (!query.hasOwnProperty("name") || query.name === null) {
-    throw new ParsingError("Missing field 'name' in query");
+  if (query.hasOwnProperty("name") && typeof query.name !== "string") {
+    throw new ParsingError("'name' field must be a string");
   }
 
-  if (!query.hasOwnProperty("filter") || query.filter === null) {
-    throw new ParsingError("Missing field 'filter' in query");
+  if (query.hasOwnProperty("filter") && typeof query.filter !== "string") {
+    throw new ParsingError("'filter' field must be a string");
   }
 
-  if (
-    query.hasOwnProperty("autorefresh") &&
-    (isNaN(query.autorefresh) || (query.autorefresh as number) < 0)
-  ) {
-    throw new ParsingError("'autorefresh' field must be a positive number.");
+  if (query.hasOwnProperty("timeMin")) {
+    if (typeof query.timeMin !== "string") {
+      throw new ParsingError("'timeMin' field must be a string");
+    }
+    if (!window.moment(query.timeMin).isValid()) {
+      throw new ParsingError("'timeMin' field must be a valid moment string");
+    }
+  }
+
+  if (query.hasOwnProperty("timeMax")) {
+    if (typeof query.timeMax !== "string") {
+      throw new ParsingError("'timeMax' field must be a string");
+    }
+    if (!window.moment(query.timeMax).isValid()) {
+      throw new ParsingError("'timeMax' field must be a valid moment string");
+    }
+  }
+
+  if (query.hasOwnProperty("maxEvents") && typeof query.maxEvents !== "number") {
+    throw new ParsingError("'maxEvents' field must be a number");
+  }
+
+  if (query.hasOwnProperty("group") && typeof query.group != "boolean") {
+    throw new ParsingError("'group' field must be a boolean.");
   }
 
   if (query.hasOwnProperty("sorting")) {
@@ -83,10 +102,6 @@ function parseObject(query: any): Query {
         );
       }
     }
-  }
-
-  if (query.hasOwnProperty("group") && typeof query.group != "boolean") {
-    throw new ParsingError("'group' field must be a boolean.");
   }
 
   return query as Query;

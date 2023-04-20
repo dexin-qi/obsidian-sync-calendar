@@ -103,6 +103,7 @@ export default class ObsidianTasksSync {
         console.error("Cannot find line/prefix for updated todo: " + todo.content);
         return;
       }
+      console.info(`Updated line: ${targetLine}`);
       let updateLine = targetLinePrefix + this.deserializer.serialize(todo);
 
       const updatedFileLines: string[] = [
