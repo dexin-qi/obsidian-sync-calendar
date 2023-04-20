@@ -83,6 +83,20 @@
 				.setIcon("popup-open")
 				.onClick(() => {
 					api.deleteEventsQueue.enqueue(todo);
+					if (
+						todo.path &&
+						todo.path !== null &&
+						todo.path !== undefined
+					) {
+            // FIXME: if user sync -> refresh -> move todo to another line 
+						if (
+							todo.blockId &&
+							todo.blockId !== null &&
+							todo.blockId !== undefined
+						) {
+							plugin.obsidianSync.deleteTodo(todo);
+						}
+					}
 				})
 		);
 
