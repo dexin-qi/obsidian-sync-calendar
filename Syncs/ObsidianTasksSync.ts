@@ -19,6 +19,56 @@ export default class ObsidianTasksSync {
     this.fileMutex = new Mutex();
   }
 
+  public patchTodoToDone(todo: Todo) {
+    if (!todo.path || !todo.blockId) {
+      console.error("Cannot find file for updated todo: " + todo.content);
+      return;
+    }
+    if (todo.blockId === null || todo.blockId === undefined || todo.blockId.length < 0) {
+      console.error("Invalid todo.blockId: " + todo.content);
+      return;
+    }
+
+    const file = this.app.vault.getAbstractFileByPath(todo.path);
+    if (!(file instanceof TFile)) {
+      new Notice(`Calendar-Sync: No file found for todo ${todo.content}. Retrying ...`);
+      return Error(`No file found for task ${todo.content}`);
+    }
+
+    this.fileMutex.runExclusive(async () => {
+      const fileContent = await self.app.vault.read(file);
+      const fileLines = fileContent.split('\n');
+
+      let targetLine: number | undefined = undefined;
+      let targetLinePrefix: string | undefined = undefined;
+      fileLines.forEach((line, line_index) => {
+        let index = line.indexOf(todo.blockId!);
+        if (index > -1) {
+          targetLine = line_index;
+          let matchResult = line.match(/.*- \[.\] /);
+          if (matchResult) {
+            targetLinePrefix = matchResult[0];
+            // set target line to done;
+            targetLinePrefix = targetLinePrefix.replace(/.*(- \[.\] )/, '- [x] ');
+          }
+        }
+      });
+      if (targetLine === undefined) {
+        console.error("Cannot find line/prefix for updated todo: " + todo.content);
+        return;
+      }
+      let updateLine = targetLinePrefix + this.deserializer.serialize(todo);
+
+      const updatedFileLines: string[] = [
+        ...fileLines.slice(0, targetLine),
+        updateLine,
+        ...fileLines.slice(targetLine + 1),
+      ];
+
+      self.app.vault.modify(file, updatedFileLines.join('\n'));
+    });
+  }
+
   public updateTodos(obsidianTodos: Todo[], calendarTodos: Todo[]): void | Error {
     // Obsidian 只负责创建和销毁任务，tasks + reminder
     // 可以先使用 block_id 
@@ -144,7 +194,7 @@ export default class ObsidianTasksSync {
       if (window.moment(todo.startDateTime!).isBefore(startMoment)) {
         return;
       }
-      
+
       ob_todos.push(todo);
     }); // queried_tasks <for each>
 

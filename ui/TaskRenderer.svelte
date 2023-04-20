@@ -58,6 +58,17 @@
 
 	async function onClickTask(todo: Todo) {
 		api.doneEventsQueue.enqueue(todo);
+		//TODO: move this to queue operation
+		console.log(todo);
+		if (todo.path && todo.path !== null && todo.path !== undefined) {
+			if (
+				todo.blockId &&
+				todo.blockId !== null &&
+				todo.blockId !== undefined
+			) {
+				plugin.obsidianSync.patchTodoToDone(todo);
+			}
+		}
 	}
 
 	function onClickTaskContainer(evt: MouseEvent) {

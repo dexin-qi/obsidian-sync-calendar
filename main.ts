@@ -47,7 +47,7 @@ export default class SyncCalendarPlugin extends Plugin {
   public netStatusItem: HTMLElement;
 
   private calendarSync: GoogleCalendarSync;
-  private obsidianSync: ObsidianTasksSync;
+  public obsidianSync: ObsidianTasksSync;
 
   private queryInjector: QueryInjector;
 
@@ -141,6 +141,57 @@ export default class SyncCalendarPlugin extends Plugin {
 
   onunload() {
 
+  }
+
+  public async fetchFullTodos(): Promise<Todo[]> {
+    let obsidianTodos = this.obsidianSync.fetchTodos(
+      window.moment().startOf('day'),
+      window.moment.duration(this.settings.fetchWeeksAgo, "weeks"),
+    );
+
+    let obsidianTodosBlockIds: string[] = [];
+    if (obsidianTodos instanceof Error) {
+      new Notice("Error on fetch Obsidain tasks");
+      return;
+    }
+    obsidianTodos.map((todo) => {
+      if (todo.blockId !== null && todo.blockId !== undefined) {
+        obsidianTodosBlockIds.push(todo.blockId);
+      }
+    });
+
+    let calendarTodos = await this.calendarSync.fetchTodos(
+      window.moment().startOf('day'),
+      window.moment.duration(this.settings.fetchWeeksAgo, "weeks"),
+      this.settings.fetchMaximumEvents
+    ).catch(err => { throw err; });
+
+    let calendarTodosBlockIds: string[] = [];
+    calendarTodos.map((todo) => {
+      if (todo.blockId !== null && todo.blockId !== undefined) {
+        calendarTodosBlockIds.push(todo.blockId);
+      }
+    });
+
+
+
+    calendarTodos.map((todo: Todo) => {
+      if (todo.blockId === null || todo.blockId === undefined) {
+        return;
+      }
+      if (calendarTodosBlockIds.indexOf(todo.blockId) > -1) {
+        obsidianTodos.forEach((ob_todo: Todo) => {
+          if (todo.blockId == ob_todo.blockId) {
+            todo.path = ob_todo.path;
+            console.log(`todo: ${todo.content} path:${todo.path}`);
+          }
+        });
+      }
+    });
+
+    return new Promise((resolve, reject) => {
+      resolve(calendarTodos);
+    })
   }
 
   private async syncWithCalendar() {

@@ -52,12 +52,12 @@
 		fetching = true;
 		plugin.syncStatusItem.setText("Sync: 🔽");
 
-		const fetchPromise = api
-			.fetchTodos(
-				window.moment().startOf("day"),
-				window.moment.duration(plugin.settings.fetchWeeksAgo, "weeks"),
-				plugin.settings.fetchMaximumEvents
-			)
+		const fetchPromise = plugin
+			.fetchFullTodos
+			// window.moment().startOf("day"),
+			// window.moment.duration(plugin.settings.fetchWeeksAgo, "weeks"),
+			// plugin.settings.fetchMaximumEvents
+			()
 			.then((newEventsList) => {
 				eventsList = newEventsList;
 				fetchedOnce = true;
