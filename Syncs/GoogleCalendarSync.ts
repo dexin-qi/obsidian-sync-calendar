@@ -215,14 +215,21 @@ export default class GoogleCalendarSync {
     while (retryTimes < 20 && !isPatchSuccess) {
       ++retryTimes;
 
-      await this.patchEvent(calendar, auth, todo.eventId, { "description": eventDescUpdate, })
-        .then(() => {
-          isPatchSuccess = true;
-          console.info(`Patched event: ${todo.content}!`);
-        }).catch(async (error) => {
-          console.error('Error on patching event:', error);
-          await new Promise(resolve => setTimeout(resolve, 100));
-        });
+      await this.patchEvent(
+        calendar,
+        auth,
+        todo.eventId,
+        {
+          "summary": `✅ ${todo.content}`,
+          "description": eventDescUpdate,
+        }
+      ).then(() => {
+        isPatchSuccess = true;
+        console.info(`Patched event: ${todo.content}!`);
+      }).catch(async (error) => {
+        console.error('Error on patching event:', error);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
     }
     return isPatchSuccess;
   }
