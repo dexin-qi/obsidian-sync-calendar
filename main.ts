@@ -1,10 +1,10 @@
 import axios from 'axios';
-import { App, type PluginManifest, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+
+import { App, type PluginManifest, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 import type { Todo } from 'TodoSerialization/Todo';
-import { TodosEvents } from 'TodoSerialization/TodoEvents';
-import { Cache, State } from 'TodoSerialization/Cache';
 import GoogleCalendarSync from 'Syncs/GoogleCalendarSync'
+import { NetworkStatus } from 'Syncs/StatusEnumerate';
 import ObsidianTasksSync from 'Syncs/ObsidianTasksSync';
 import QueryInjector from 'Injector/QueryInjector';
 // import SyncResultModal from './Modals/syncResult'
@@ -12,27 +12,42 @@ import QueryInjector from 'Injector/QueryInjector';
 // Remember to rename these classes and interfaces!
 
 interface SyncCalendarPluginSettings {
-  proxy_enabled: boolean;
-  proxy_host: string;
-  proxy_port: number;
-  proxy_protocol: string;
+  proxyEnabled: boolean;
+  proxyHost: string;
+  proxyPort: number;
+  proxyProtocol: string;
+
+  fetchWeeksAgo: number;
+  fetchMaximumEvents: number;
+
+  renderDate: boolean;
+  renderTags: boolean;
 }
 
 const DEFAULT_SETTINGS: SyncCalendarPluginSettings = {
-  proxy_enabled: false,
-  proxy_host: '127.0.0.1',
-  proxy_port: 20171,
-  proxy_protocol: 'http',
+  proxyEnabled: false,
+  proxyHost: '127.0.0.1',
+  proxyPort: 20171,
+  proxyProtocol: 'http',
+
+  fetchWeeksAgo: 4,
+  fetchMaximumEvents: 2000,
+
+  renderDate: true,
+  renderTags: true,
 }
 
 
 export default class SyncCalendarPlugin extends Plugin {
   public settings: SyncCalendarPluginSettings;
+
   public syncStatusItem: HTMLElement;
 
-  private cache: Cache | undefined;
+  public netStatus: NetworkStatus;
+  public netStatusItem: HTMLElement;
+
   private calendarSync: GoogleCalendarSync;
-  private obsidianSync: ObsidianTasksSync;
+  public obsidianSync: ObsidianTasksSync;
 
   private queryInjector: QueryInjector;
 
@@ -45,44 +60,30 @@ export default class SyncCalendarPlugin extends Plugin {
 
     this.addSettingTab(new SyncCalendarPluginSettingTab(this.app, this));
 
-    if (this.settings.proxy_enabled) {
+    if (this.settings.proxyEnabled) {
       axios.defaults.proxy = {
-        host: this.settings.proxy_host,
-        port: this.settings.proxy_port,
-        protocol: this.settings.proxy_protocol,
+        host: this.settings.proxyHost,
+        port: this.settings.proxyPort,
+        protocol: this.settings.proxyProtocol,
       };
       console.log("Proxy protocol: " + axios.defaults.proxy.protocol);
       console.log("Proxy host: " + axios.defaults.proxy.host);
       console.log("Proxy port: " + axios.defaults.proxy.port);
     } else {
-      console.log("Proxy Not Enabled!");
       axios.defaults.proxy = false;
-      console.log("Proxy: " + axios.defaults.proxy);
+      console.log("Proxy Not Enabled!");
     }
 
-    // const events = new TodosEvents({ obsidianEvents: this.app.workspace });
-    // this.cache = new Cache({
-    //   app: this.app,
-    //   metadataCache: this.app.metadataCache,
-    //   vault: this.app.vault,
-    //   events,
-    // });
-
-    // this.app.plugins..registerEvent(plugin.app.metadataCache.on("dataview:metadata-change",
-    // ));
-
-    // this.app.workspace.trigger("dataview:index-ready", () => {
-    //   console.log("!!! Dateview is ready, dexin has receive callback!!!");
-    // });
-
     // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
+    this.netStatusItem = this.addStatusBarItem();
+    this.netStatusItem.setText("Net: 🔵");
     this.syncStatusItem = this.addStatusBarItem();
-    this.syncStatusItem.setText("Sync: 🟠");
+    this.syncStatusItem.setText("Sync: *️⃣");
 
     this.calendarSync = new GoogleCalendarSync(this.app.vault);
     this.obsidianSync = new ObsidianTasksSync(this.app);
 
-    this.queryInjector = new QueryInjector(this, this.app);
+    this.queryInjector = new QueryInjector(this);
     this.queryInjector.setCalendarSync(this.calendarSync);
 
     this.registerMarkdownCodeBlockProcessor("calendar-sync",
@@ -104,18 +105,53 @@ export default class SyncCalendarPlugin extends Plugin {
       }
     });
 
-    // // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-    // this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+    // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
+    this.registerInterval(window.setInterval(() => {
+      if (this.settings.proxyEnabled) {
+        const proxy = {
+          host: this.settings.proxyHost,
+          port: this.settings.proxyPort,
+          protocol: this.settings.proxyProtocol,
+        };
+        // TODO: exam the proxy
+        // this.netStatus = NetworkStatus.PROXY_ERROR;
+      }
+
+      switch (this.netStatus) {
+        case NetworkStatus.CONNECTION_ERROR:
+          this.netStatusItem.setText("Net: 🔴");
+          break;
+        case NetworkStatus.PROXY_ERROR:
+          this.netStatusItem.setText("Net: 🟠");
+          break;
+        case NetworkStatus.HEALTH:
+          this.netStatusItem.setText("Net: 🟢");
+          break;
+        case NetworkStatus.UNKOWN:
+          this.netStatusItem.setText("Net: 🔵");
+        default:
+          break;
+      }
+    }, 5000));
+
+    this.registerInterval(window.setInterval(() => {
+      this.patchDoneEventLists();
+    }, 1000));
   }
 
   onunload() {
 
   }
 
-  private async syncWithCalendar() {
-    this.syncStatusItem.setText('Sync: 🔄');
+  public async fetchFullTodos(keyMoment: moment.Moment, timeWindowBiasAhead: moment.Duration, max_results: number = 20): Promise<Todo[]> {
+    console.log(keyMoment);
+    console.log(timeWindowBiasAhead);
+    console.log(max_results);
+    let obsidianTodos = this.obsidianSync.fetchTodos(
+      keyMoment,
+      timeWindowBiasAhead
+    );
 
-    let obsidianTodos = this.obsidianSync.fetchTodos();
     let obsidianTodosBlockIds: string[] = [];
     if (obsidianTodos instanceof Error) {
       new Notice("Error on fetch Obsidain tasks");
@@ -127,7 +163,66 @@ export default class SyncCalendarPlugin extends Plugin {
       }
     });
 
-    let calendarTodos: Todo[] = await this.calendarSync.fetchTodos();
+    let calendarTodos = await this.calendarSync.fetchTodos(
+      keyMoment,
+      timeWindowBiasAhead,
+      max_results
+    ).catch(err => { throw err; });
+
+    let calendarTodosBlockIds: string[] = [];
+    calendarTodos.map((todo) => {
+      if (todo.blockId !== null && todo.blockId !== undefined) {
+        calendarTodosBlockIds.push(todo.blockId);
+      }
+    });
+
+
+
+    calendarTodos.map((todo: Todo) => {
+      if (todo.blockId === null || todo.blockId === undefined) {
+        return;
+      }
+      if (calendarTodosBlockIds.indexOf(todo.blockId) > -1) {
+        obsidianTodos.forEach((ob_todo: Todo) => {
+          if (todo.blockId == ob_todo.blockId) {
+            todo.path = ob_todo.path;
+            console.log(`todo: ${todo.content} path:${todo.path}`);
+          }
+        });
+      }
+    });
+
+    return new Promise((resolve, reject) => {
+      resolve(calendarTodos);
+    })
+  }
+
+  private async syncWithCalendar() {
+    this.syncStatusItem.setText('Sync: 🔄');
+
+
+    let obsidianTodos = this.obsidianSync.fetchTodos(
+      window.moment().startOf('day'),
+      window.moment.duration(this.settings.fetchWeeksAgo, "weeks"),
+    );
+
+    let obsidianTodosBlockIds: string[] = [];
+    if (obsidianTodos instanceof Error) {
+      new Notice("Error on fetch Obsidain tasks");
+      return;
+    }
+    obsidianTodos.map((todo) => {
+      if (todo.blockId !== null && todo.blockId !== undefined) {
+        obsidianTodosBlockIds.push(todo.blockId);
+      }
+    });
+
+    let calendarTodos = await this.calendarSync.fetchTodos(
+      window.moment().startOf('day'),
+      window.moment.duration(this.settings.fetchWeeksAgo, "weeks"),
+      this.settings.fetchMaximumEvents
+    ).catch(err => { throw err; });
+
     let calendarTodosBlockIds: string[] = [];
     calendarTodos.map((todo) => {
       if (todo.blockId !== null && todo.blockId !== undefined) {
@@ -217,16 +312,56 @@ export default class SyncCalendarPlugin extends Plugin {
       eventDescs.push('Sync Result: no update');
     }
 
-    this.syncStatusItem.setText('Sync: 🟢');
+    this.netStatus = NetworkStatus.HEALTH;
+    this.syncStatusItem.setText('Sync: 🆗');
 
     // new SyncResultModal(this.app, eventDescs).open();
     new Notice(eventDescs.join('\n'));
   }
 
-  private onRequestCacheUpdate({ todos, state }: { todos: Todo[], state: State }) {
-    console.debug('onRequestCacheUpdate');
-    console.info(`state: ${state.toString()}`);
-    console.info(`todos: ${todos}`);
+  private async patchDoneEventLists() {
+    const apiIsReady = await this.calendarSync.isReady();
+    if (!apiIsReady) {
+      return;
+    }
+
+    const originNeedToPatch = this.calendarSync.doneEventsQueue.length;
+    if (originNeedToPatch > 0) {
+      this.syncStatusItem.setText("Sync: 🔼");
+      this.calendarSync.doneEventsQueue.refresh()
+        .then((isAllSucc) => {
+          if (isAllSucc) {
+            this.netStatus = NetworkStatus.HEALTH;
+            this.syncStatusItem.setText("Sync: 🆗");
+            console.info(
+              `Successfully Patched ${originNeedToPatch - this.calendarSync.doneEventsQueue.length
+              } events!`
+            );
+          } else {
+            this.syncStatusItem.setText("Sync: 🆖");
+          }
+        })
+        .catch((err) => { this.syncStatusItem.setText("Sync: 🆖"); });
+    }
+
+    const originNeedToDelete = this.calendarSync.deleteEventsQueue.length;
+    if (originNeedToDelete > 0) {
+      this.syncStatusItem.setText("Sync: 🔼");
+      this.calendarSync.deleteEventsQueue.refresh()
+        .then((isAllSucc) => {
+          if (isAllSucc) {
+            this.netStatus = NetworkStatus.HEALTH;
+            this.syncStatusItem.setText("Sync: 🆗");
+            console.info(
+              `Successfully Deleted ${originNeedToDelete - this.calendarSync.deleteEventsQueue.length
+              } events!`
+            );
+          } else {
+            this.syncStatusItem.setText("Sync: 🆖");
+          }
+        })
+        .catch((err) => { this.syncStatusItem.setText("Sync: 🆖"); });
+    }
   }
 
   async loadSettings() {
@@ -265,15 +400,14 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       "The Proxy Settings to use when syncing with calendar. \u26A0\ufe0fYou will need to RESTART Obsidian after setting this! \u26A0\ufe0f"
     );
 
-
     // Proxy enabled checkbox
     this.proxyEnabledCheckbox = new Setting(containerEl)
       .setName("Enable Proxy")
       // .setDesc(desc)
       .addToggle(toggle =>
-        toggle.setValue(this.plugin.settings.proxy_enabled)
+        toggle.setValue(this.plugin.settings.proxyEnabled)
           .onChange(async (value) => {
-            this.plugin.settings.proxy_enabled = value;
+            this.plugin.settings.proxyEnabled = value;
             this.toggleProxySettings(value);
             await this.plugin.saveSettings();
           })
@@ -288,9 +422,9 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
           .addOption("http", "HTTP")
           .addOption("https", "HTTPS")
           .addOption("socks5", "SOCKS5")
-          .setValue(this.plugin.settings.proxy_protocol)
+          .setValue(this.plugin.settings.proxyProtocol)
           .onChange(async (value) => {
-            this.plugin.settings.proxy_protocol = value;
+            this.plugin.settings.proxyProtocol = value;
             await this.plugin.saveSettings();
           })
       )
@@ -302,9 +436,9 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       .setDesc("Enter the IP address or hostname of the proxy server")
       .addText(text =>
         text
-          .setValue(this.plugin.settings.proxy_host)
+          .setValue(this.plugin.settings.proxyHost)
           .onChange(async (value) => {
-            this.plugin.settings.proxy_host = value;
+            this.plugin.settings.proxyHost = value;
             await this.plugin.saveSettings();
           })
       )
@@ -316,11 +450,11 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       .setDesc("Enter the port number used by the proxy server")
       .addText(text =>
         text
-          .setValue(this.plugin.settings.proxy_port.toString())
+          .setValue(this.plugin.settings.proxyPort.toString())
           .onChange(async (value) => {
             const port = parseInt(value);
             if (!isNaN(port)) {
-              this.plugin.settings.proxy_port = port;
+              this.plugin.settings.proxyPort = port;
               await this.plugin.saveSettings();
             }
           })
@@ -328,8 +462,75 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       .controlEl.querySelector("input");
 
     // Hide or show the protocol type selector, address input, and port input based on whether the proxy is enabled
-    this.toggleProxySettings(this.plugin.settings.proxy_enabled);
+    this.toggleProxySettings(this.plugin.settings.proxyEnabled);
 
+
+    this.createHeader(
+      "Fetch Settings",
+      "Settings to manage calendar fetch events."
+    );
+
+
+    new Setting(containerEl)
+      .setName("Weeks Ago")
+      .setDesc("Enter how many weeks ago did you concerned.")
+      .addText(text =>
+        text
+          .setValue(this.plugin.settings.fetchWeeksAgo.toString())
+          .onChange(async (value) => {
+            const weeksAgo = parseInt(value);
+            if (!isNaN(weeksAgo)) {
+              this.plugin.settings.fetchWeeksAgo = weeksAgo;
+            }
+            await this.plugin.saveSettings();
+          })
+      ).controlEl.querySelector("input");
+
+    new Setting(containerEl)
+      .setName("Maximum Events")
+      .setDesc("Enter the maximum number of events in the fetching window")
+      .addText(text =>
+        text
+          .setValue(this.plugin.settings.fetchMaximumEvents.toString())
+          .onChange(async (value) => {
+            const maximumEvents = parseInt(value);
+            if (!isNaN(maximumEvents)) {
+              this.plugin.settings.fetchMaximumEvents = maximumEvents;
+              await this.plugin.saveSettings();
+            }
+          })
+      ).controlEl.querySelector("input");
+
+    this.createHeader(
+      "Render Settings",
+      "Settings to manage render events."
+    );
+
+    new Setting(containerEl)
+      .setName("Render Date")
+      // .setDesc(desc)
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.renderDate)
+          .onChange(async (value) => {
+            this.plugin.settings.renderDate = value;
+            this.toggleProxySettings(value);
+            await this.plugin.saveSettings();
+          })
+      )
+      .controlEl.querySelector("input");
+
+    new Setting(containerEl)
+      .setName("Render Tags")
+      // .setDesc(desc)
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.renderTags)
+          .onChange(async (value) => {
+            this.plugin.settings.renderTags = value;
+            this.toggleProxySettings(value);
+            await this.plugin.saveSettings();
+          })
+      )
+      .controlEl.querySelector("input");
   }
 
   toggleProxySettings(enabled: boolean) {

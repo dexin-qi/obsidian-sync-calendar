@@ -1,40 +1,69 @@
 <script lang="ts">
 	import type SyncCalendarPlugin from "main";
+	import { NetworkStatus } from "Syncs/StatusEnumerate";
 	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
-	import type { Todo } from "TodoSerialization/Todo";
+	import { Todo } from "TodoSerialization/Todo";
 
 	import { onMount, onDestroy } from "svelte";
 
 	import ErrorDisplay from "./ErrorDisplay.svelte";
 	import TaskList from "./TaskList.svelte";
 	import NoTaskDisplay from "./NoTaskDisplay.svelte";
-	import { rejects } from "assert";
-	import { resolve } from "path";
-	import { apiVersion } from "obsidian";
+
+	import type { Query } from "Injector/Query";
 
 	export let plugin: SyncCalendarPlugin;
 	export let api: GoogleCalendarSync;
+	export let query: Query;
 
 	let fetching = false;
 	let eventsList: Todo[] = [];
+	let todos: Todo[] = [];
+
+	$: todos = filterTodos(eventsList);
+
+	function filterTodos(todoList: Todo[]) {
+		if (query && query.timeMax) {
+			return todoList.filter((todo: Todo) => {
+				if (Todo.isDatetime(todo.startDateTime!)) {
+					return window
+						.moment(query.timeMax)
+						.isAfter(window.moment(todo.startDateTime));
+				} else {
+					return window
+						.moment(query.timeMax)
+						.isAfter(window.moment(todo.startDateTime));
+				}
+			});
+		}
+		return todoList;
+	}
 
 	let autoRefreshIntervalId: null | number = null;
 
 	let error_info: null | Error = null;
 	let fetchedOnce = false;
-	let refreshTimes = 1;
-	let eventsListTitle = "TODOs in Calendar";
+	let eventsListTitle: string;
+
+	$: eventsListTitle =
+		query !== undefined && query.name
+			? query.name
+			: "{number} todos in Calendar";
+
+	$: {
+		console.log(query);
+	}
 
 	$: {
 		if (autoRefreshIntervalId == null) {
 			autoRefreshIntervalId = window.setInterval(async () => {
-				await fetchTodos();
+				await fetchEventLists();
 			}, 10000);
 		}
 	}
 
 	onMount(async () => {
-		await fetchTodos();
+		await fetchEventLists();
 	});
 
 	onDestroy(() => {
@@ -43,7 +72,7 @@
 		}
 	});
 
-	async function fetchTodos() {
+	async function fetchEventLists() {
 		const apiIsReady = await api.isReady();
 		if (!apiIsReady) {
 			return;
@@ -55,26 +84,45 @@
 		fetching = true;
 		plugin.syncStatusItem.setText("Sync: 🔽");
 
-		const fetchPromise = api
-			.fetchTodos(200)
+		const fetchPromise = plugin
+			.fetchFullTodos(
+				query && query.timeMin
+					? window.moment(query.timeMin)
+					: window.moment().startOf("day"),
+				query && query.timeMin
+					? window.moment.duration(0)
+					: window.moment.duration(
+							plugin.settings.fetchWeeksAgo,
+							"weeks"
+					  ),
+				query && query.maxEvents
+					? query.maxEvents
+					: plugin.settings.fetchMaximumEvents
+			)
 			.then((newEventsList) => {
 				eventsList = newEventsList;
 				fetchedOnce = true;
-				plugin.syncStatusItem.setText("Sync: 🔵");
-				console.info(`Fetched success: ${eventsList.length} events`);
+				plugin.netStatus = NetworkStatus.HEALTH;
+				plugin.syncStatusItem.setText("Sync: 🆗");
+				console.info(
+					`Successfully Fetched ${eventsList.length} events`
+				);
 			})
 			.catch((err) => {
-				throw new Error(
-					"Connection failed, \
-          cannot fetch events from Google calendar."
-				);
+				console.error(err);
+				plugin.netStatus = NetworkStatus.CONNECTION_ERROR;
+				throw new err();
+				// Error(
+				// 	"We are currently unable to \
+				//   fetch events list from Google calendar."
+				// );
 			});
 
 		const timeoutPromise = new Promise((resolve, reject) => {
 			setTimeout(() => {
 				reject(
 					new Error(
-						"Fetch from Google calendar timeout! \
+						"Timeout occurred when fetching from Google Calendar! \
             Check your connection and proxy settings, \
             then restart Obsidian."
 					)
@@ -90,46 +138,50 @@
 			.catch((err) => {
 				fetching = false;
 				error_info = err;
-				plugin.syncStatusItem.setText("Sync: 🔴");
+				plugin.netStatus = NetworkStatus.CONNECTION_ERROR;
+				plugin.syncStatusItem.setText("Sync: 🆖");
 			});
 	}
 </script>
 
-{#if fetchedOnce}
-	{#if eventsList.length == 0}
-		<h4 class="todoist-query-title">TODO in Calendar</h4>
-		<NoTaskDisplay />
-	{:else}
-		<h4 class="todoist-query-title">
-			{eventsList.length}
-			{eventsListTitle}
+<div>
+	{#if eventsListTitle.length > 0}
+		<h4 class="todo-list-query-title">
+			{eventsListTitle.replace("{numberTodo}", todos.length.toString())}
 		</h4>
-		<TaskList todoList={eventsList} />
 	{/if}
-{/if}
+	<button
+		class="todo-list-refresh-button"
+		on:click={async () => {
+			await fetchEventLists();
+		}}
+		disabled={fetching}
+	>
+		<svg
+			class={fetching ? "todo-list-refresh-spin" : ""}
+			width="20px"
+			height="20px"
+			viewBox="0 0 20 20"
+			fill="currentColor"
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<path
+				fill-rule="evenodd"
+				d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+				clip-rule="evenodd"
+			/>
+		</svg>
+	</button>
+
+	{#if fetchedOnce}
+		{#if eventsList.length == 0}
+			<NoTaskDisplay />
+		{:else}
+			<TaskList {api} {plugin} {todos} />
+		{/if}
+	{/if}
+</div>
+
 {#if error_info !== null}
 	<ErrorDisplay error={error_info} />
 {/if}
-
-<button
-	class="todoist-refresh-button"
-	on:click={async () => {
-		await fetchTodos();
-	}}
-	disabled={fetching}
->
-	<svg
-		class={fetching ? "todoist-refresh-spin" : ""}
-		width="20px"
-		height="20px"
-		viewBox="0 0 20 20"
-		fill="currentColor"
-		xmlns="http://www.w3.org/2000/svg"
-	>
-		<path
-			fill-rule="evenodd"
-			d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-			clip-rule="evenodd"
-		/>
-	</svg>
-</button>

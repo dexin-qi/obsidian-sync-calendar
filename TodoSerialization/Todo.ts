@@ -14,6 +14,9 @@ export class Todo {
   public children?: Todo[] | undefined;
 
   public calUId?: null | string | undefined;
+  public eventId?: null | string | undefined;
+  public eventStatus?: null | string | undefined;
+  public eventHtmlLink?: null | string | undefined;
 
   public path?: string | undefined;
   public blockId?: null | string | undefined;
@@ -30,8 +33,11 @@ export class Todo {
     children,
     path,
     blockId,
+    eventStatus,
     updated,
-    calUId
+    calUId,
+    eventId,
+    eventHtmlLink
   }: {
     content: null | string | undefined;
     priority?: null | string | undefined;
@@ -42,8 +48,11 @@ export class Todo {
     children?: Todo[] | undefined;
     path?: string | undefined;
     blockId?: null | string | undefined;
+    eventStatus?: null | string | undefined;
     updated?: null | string | undefined;
     calUId?: null | string | undefined;
+    eventId?: null | string | undefined;
+    eventHtmlLink?: null | string | undefined;
   }) {
     this.content = content;
 
@@ -57,8 +66,11 @@ export class Todo {
 
     this.path = path;
     this.blockId = blockId;
+    this.eventStatus = eventStatus;
 
     this.calUId = calUId;
+    this.eventId = eventId;
+    this.eventHtmlLink = eventHtmlLink;
 
     this.updated = updated;
   }
@@ -73,8 +85,43 @@ export class Todo {
     if (todo.children) { this.children = todo.children; }
     if (todo.path) { this.path = todo.path; }
     if (todo.blockId) { this.blockId = todo.blockId; }
+    if (todo.eventStatus) { this.eventStatus = todo.eventStatus; }
     if (todo.calUId) { this.calUId = todo.calUId; }
+    if (todo.eventHtmlLink) { this.eventHtmlLink = todo.eventHtmlLink; }
+    if (todo.eventId) { this.eventId = todo.eventId; }
     if (todo.updated) { this.updated = todo.updated; }
+  }
+
+  public serializeDescription(): string {
+    return JSON.stringify({
+      eventStatus: this.eventStatus ? this.eventStatus : 'todo',
+      blockId: this.blockId,
+      priority: this.priority,
+      tags: this.tags,
+    });
+  }
+
+  public isOverdue(): boolean {
+    if (this.dueDateTime) {
+      if (Todo.isDatetime(this.dueDateTime)) {
+        return window.moment().isAfter(this.dueDateTime);
+      } else {
+        return window.moment().startOf('day').isAfter(this.dueDateTime);
+      }
+    }
+    return false;
+  }
+
+  static isDatetime(datatimeString: string): boolean {
+    const regDateTime = /(\d{4}-\d{2}-\d{2}T)/u;
+    return datatimeString.match(regDateTime) !== null;
+  }
+
+  static momentString(momentString: string, emoji: '🛫' | '⌛' | '🗓'): string {
+    if (Todo.isDatetime(momentString)) {
+      return `${emoji} ${window.moment(momentString).format("YYYY-MM-DD[@]HH:mm")}`;
+    }
+    return `${emoji} ${momentString}`;
   }
 
   static todosListsIdentical(oldTasks: Todo[], newTodos: Todo[]): boolean {
@@ -90,6 +137,7 @@ export class Todo {
       'priority',
       'tags',
       'calUId',
+      'eventId',
       'path',
       'blockId',
       'updated',

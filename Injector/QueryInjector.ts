@@ -4,25 +4,24 @@ import {
   MarkdownRenderChild,
 } from "obsidian";
 
-import SyncCalendarPlugin from "main";
+import type SyncCalendarPlugin from "main";
+import type GoogleCalendarSync from "../Syncs/GoogleCalendarSync";
 
-import GoogleCalendarSync from "../Syncs/GoogleCalendarSync";
+import { parseQuery } from "./Parser";
+import { Query } from "./Query";
 
 import TodoistQuery from "../ui/TodoistQuery.svelte";
-import type SvelteComponentDev from "../ui/TodoistQuery.svelte";
 import ErrorDisplay from "../ui/ErrorDisplay.svelte";
-// import SvelteComponentDev
+import type { SvelteComponentDev } from "svelte/internal";
 
 export default class QueryInjector {
-  private app: App;
   private pendingQueries: PendingQuery[];
 
   private plugin: SyncCalendarPlugin;
   private calendarSync: GoogleCalendarSync;
 
-  constructor(plugin: SyncCalendarPlugin, app: App) {
+  constructor(plugin: SyncCalendarPlugin) {
     this.plugin = plugin;
-    this.app = app;
     this.pendingQueries = [];
   }
 
@@ -33,8 +32,6 @@ export default class QueryInjector {
       ctx: ctx,
     };
     // console.log('source: ' + source);
-    // console.log('target: ' + el);
-    // console.log('ctx: ' + ctx);
 
     if (typeof this.calendarSync == "undefined") {
       this.pendingQueries.push(pendingQuery);
@@ -54,16 +51,38 @@ export default class QueryInjector {
   }
 
   injectQuery(pendingQuery: PendingQuery) {
-    const child = new InjectedQuery(pendingQuery.target, (root: HTMLElement) => {
-      return new TodoistQuery({
-        target: root,
-        props: {
-          plugin: this.plugin,
-          api: this.calendarSync,
+    let child: InjectedQuery;
 
-        },
+    try {
+      let query: Query;
+      if (pendingQuery.source.length > 0) {
+        query = parseQuery(pendingQuery.source);
+      }
+
+      child = new InjectedQuery(pendingQuery.target, (root: HTMLElement) => {
+        return new TodoistQuery({
+          target: root,
+          props: {
+            plugin: this.plugin,
+            api: this.calendarSync,
+            query: query,
+          },
+        });
       });
-    });
+    }
+    catch (e) {
+      console.error(e);
+
+      child = new InjectedQuery(pendingQuery.target, (root: HTMLElement) => {
+        return new ErrorDisplay({
+          target: root,
+          props: {
+            error: e
+          },
+        });
+      });
+    }
+
 
     pendingQuery.ctx.addChild(child);
   }
