@@ -226,6 +226,7 @@ export default class GoogleCalendarSync {
     return isPatchSuccess;
   }
 
+  // TODO: 参考这里整理其他部分的代码风格。
   async deleteEvent(todo: Todo): Promise<boolean> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
@@ -235,22 +236,6 @@ export default class GoogleCalendarSync {
     while (retryTimes < 20 && !isDeleteSuccess) {
       ++retryTimes;
 
-      console.info(`Deleting event: ${todo.content}`);
-
-      // await new Promise(async (resolve, reject) => {
-
-      //   await calendar.events.delete({
-      //     auth: auth,
-      //     calendarId: 'primary',
-      //     eventId: todo.eventId,
-      //   }, function (err, res) {
-      //     if (err) {
-      //       reject(err);
-      //     } else {
-      //       resolve(res);
-      //     }
-      //   })
-      // })
       await calendar.events
         .delete({ auth: auth, calendarId: 'primary', eventId: todo.eventId })
         .then(() => {
