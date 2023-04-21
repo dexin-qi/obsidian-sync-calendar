@@ -8,6 +8,10 @@ import { DefaultTodoSerializer, type TodoDetails } from "TodoSerialization";
 import { Todo } from "TodoSerialization/Todo";
 import { debug } from "lib/DebugLog";
 
+/**
+ * This class is responsible for syncing tasks between Obsidian and a calendar.
+ * 这个类负责在 Obsidian 和日历之间同步任务。
+ */
 export class ObsidianTasksSync {
   private app: App;
   private dataviewAPI: DataviewApi | undefined;
@@ -31,6 +35,7 @@ export class ObsidianTasksSync {
 
   /**
    * Deletes a todo item from its file.
+   * 从文件中删除待办事项。
    * @param todo - The todo item to delete.
    */
   public async deleteTodo(todo: Todo): Promise<void> {
@@ -49,7 +54,9 @@ export class ObsidianTasksSync {
 
   /**
    * Marks a todo item as done in its file.
+   * 在文件中标记待办事项为已完成。
    * @param todo - The todo item to mark as done.
+   * @param getTodoPatch - A function that returns the updated line for the todo item.
    */
   public async patchTodo(todo: Todo, getTodoPatch: (todo: Todo, line: string) => string): Promise<void> {
     this.updateFileContent(todo, (fileLines, targetLineNumber) => {
@@ -70,6 +77,7 @@ export class ObsidianTasksSync {
 
   /**
    * Updates a todo item in its file.
+   * 更新文件中的待办事项。
    * @param todo - The todo item to update.
    */
   public async updateTodo(todo: Todo) {
@@ -91,8 +99,9 @@ export class ObsidianTasksSync {
 
   /**
    * Fetches todos based on a key moment and a time window bias ahead.
-   * @param keyMoment - The key moment to fetch todos for.
-   * @param timeWindowBiasAhead - The time window bias ahead.
+   * 根据关键时刻和时间窗口偏差获取待办事项。
+   * @param startMoment - The key moment to fetch todos for.
+   * @param triggeredBy - Whether the fetch was triggered automatically or manually.
    * @returns An array of todos.
    */
   public listTasks(startMoment: moment.Moment, triggeredBy: 'auto' | 'mannual' = 'auto'): Todo[] {
@@ -167,18 +176,21 @@ export class ObsidianTasksSync {
    * @param updateFunc - A function that takes in the file lines and the target line prefix and returns the updated line.
    */
   private async updateFileContent(todo: Todo, updateFunc: (fileLines: string[], targetLine: number) => string[]): Promise<void> {
+    // Check if todo has valid path and blockId
     if (!todo.path || !todo.blockId) {
       debug(`${todo.content} todo has invalid path or blockId`);
       debug(todo);
       throw Error(`${todo.content} todo has invalid path or blockId`);
     }
 
+    // Get the file containing the todo
     const file = this.app.vault.getAbstractFileByPath(todo.path);
     if (!(file instanceof TFile)) {
       new Notice(`No file found for todo ${todo.content}.`);
       throw Error(`No file found for todo ${todo.content}`);
     }
 
+    // Update the file content
     await this.fileMutex.runExclusive(async () => {
       const fileContent = await self.app.vault.read(file);
       const originFileLines = fileContent.split('\n');

@@ -15,32 +15,38 @@ import {
 } from './StatusEnumerate';
 
 const path = require('path');
-
+/**
+ * This class handles syncing with Google Calendar.
+ */
 export class GoogleCalendarSync {
   vault: Vault;
 
-
-  // If modifying these scopes, delete token.json.
   public SCOPES = ['https://www.googleapis.com/auth/calendar'];
-  // The file token.json stores the user's access and refresh tokens, and is
-  // created automatically when the authorization flow completes for the first
-  // time.
   private TOKEN_PATH = ""
   private CREDENTIALS_PATH = ""
 
   constructor(app: App) {
     this.vault = app.vault
 
+    // Set the paths for the token and credentials files
     this.TOKEN_PATH = path.join(this.vault.configDir, 'calendar.sync.token.json');
     this.CREDENTIALS_PATH = path.join(this.vault.configDir, 'calendar.sync.credentials.json');
   }
 
-  // 返回完成/未完成的 events
+  /**
+   * Returns a list of completed and uncompleted events.
+   * @param startMoment The start moment for the events to retrieve.
+   * @param maxResults The maximum number of results to retrieve.
+   * @returns A Promise that resolves to an array of Todo objects.
+   */
   async listEvents(startMoment: moment.Moment, maxResults: number = 200): Promise<Todo[]> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
 
+    // Set the sync and network status to DOWNLOAD
     gfSyncStatus$.next(SyncStatus.DOWNLOAD);
+
+    // Retrieve the events from Google Calendar
     const eventsListQueryResult =
       await calendar.events
         .list({
@@ -51,10 +57,13 @@ export class GoogleCalendarSync {
           orderBy: 'startTime',
         })
         .catch(err => {
+          // Set the network status to CONNECTION_ERROR and the sync status to FAILED_WARNING
           gfNetStatus$.next(NetworkStatus.CONNECTION_ERROR);
           gfSyncStatus$.next(SyncStatus.FAILED_WARNING);
           throw err;
         });
+
+    // Set the network status to HEALTH and the sync status to SUCCESS_WAITING
     gfNetStatus$.next(NetworkStatus.HEALTH);
     gfSyncStatus$.next(SyncStatus.SUCCESS_WAITING);
 
@@ -70,13 +79,18 @@ export class GoogleCalendarSync {
     return eventsList;
   }
 
-
+  /**
+   * Inserts a new event into Google Calendar.
+   * @param todo The Todo object to insert.
+   */
   async insertEvent(todo: Todo) {
     let auth = await this.authorize();
     const calendar: calendar_v3.Calendar = google.calendar({ version: 'v3', auth });
 
     let retryTimes = 0;
     let isInsertSuccess = false;
+
+    // Set the sync status to UPLOAD and attempt to insert the event
     gfSyncStatus$.next(SyncStatus.UPLOAD);
     while (retryTimes < 20 && !isInsertSuccess) {
       ++retryTimes;
@@ -97,6 +111,7 @@ export class GoogleCalendarSync {
         });
     }
 
+    // Set the sync status and network status based on whether the insert was successful
     if (isInsertSuccess) {
       gfSyncStatus$.next(SyncStatus.SUCCESS_WAITING);
       gfNetStatus$.next(NetworkStatus.HEALTH);
@@ -107,13 +122,18 @@ export class GoogleCalendarSync {
     }
   }
 
-
+  /**
+   * Deletes an event from Google Calendar.
+   * @param todo The Todo object to delete.
+   */
   async deleteEvent(todo: Todo): Promise<void> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
 
     let retryTimes = 0;
     let isDeleteSuccess = false;
+
+    // Set the sync status to UPLOAD and attempt to delete the event
     gfSyncStatus$.next(SyncStatus.UPLOAD);
     while (retryTimes < 20 && !isDeleteSuccess) {
       ++retryTimes;
@@ -133,6 +153,8 @@ export class GoogleCalendarSync {
           await new Promise(resolve => setTimeout(resolve, 100));
         });
     }
+
+    // Set the sync status and network status based on whether the delete was successful
     if (isDeleteSuccess) {
       gfSyncStatus$.next(SyncStatus.SUCCESS_WAITING);
       gfNetStatus$.next(NetworkStatus.HEALTH);
@@ -143,18 +165,22 @@ export class GoogleCalendarSync {
     }
   }
 
-
+  /**
+   * Patches an event in Google Calendar.
+   * @param todo The Todo object to patch.
+   * @param getEventPatch A function that returns the patch to apply to the event.
+   */
   async patchEvent(todo: Todo, getEventPatch: (todo: Todo) => calendar_v3.Schema$Event): Promise<void> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
 
     let retryTimes = 0;
     let isPatchSuccess = false;
+
+    // Set the sync status to UPLOAD and attempt to patch the event
     gfSyncStatus$.next(SyncStatus.UPLOAD);
     while (retryTimes < 20 && !isPatchSuccess) {
       ++retryTimes;
-
-      let x = getEventPatch(todo);
 
       await calendar.events
         .patch({
@@ -165,15 +191,15 @@ export class GoogleCalendarSync {
         } as calendar_v3.Params$Resource$Events$Patch)
         .then(() => {
           isPatchSuccess = true;
-          debug(`Patched event: ${todo.content}`);
+          debug(`Patched event: ${todo.content}!`);
           return;
-        })
-        .catch(async (error) => {
-          debug(`Error on patching event: ${error}`);
+        }).catch(async (err) => {
+          debug(`Error on patch event: ${err}`);
           await new Promise(resolve => setTimeout(resolve, 100));
         });
     }
 
+    // Set the sync status and network status based on whether the patch was successful
     if (isPatchSuccess) {
       gfSyncStatus$.next(SyncStatus.SUCCESS_WAITING);
       gfNetStatus$.next(NetworkStatus.HEALTH);
@@ -184,7 +210,11 @@ export class GoogleCalendarSync {
     }
   }
 
-
+/**
+   * Returns a patch object for a completed event in Google Calendar.
+   * @param todo The Todo object to patch.
+   * @returns {calendar_v3.Schema$Event} The patch object.
+   */
   static getEventDonePatch(todo: Todo): calendar_v3.Schema$Event {
     if (!todo.eventStatus) {
       todo.eventStatus = 'x';
@@ -228,6 +258,10 @@ export class GoogleCalendarSync {
     } as calendar_v3.Schema$Event;
   }
 
+  /**
+   * Checks if the client is authorized to call APIs.
+   * @returns {Promise<boolean>} Whether the client is authorized.
+   */
   async isReady(): Promise<boolean> {
     const client = await this.loadSavedCredentialsIfExist();
     if (client) {
@@ -237,10 +271,9 @@ export class GoogleCalendarSync {
   }
 
   /**
-  * Reads previously authorized credentials from the save file.
-  *
-  * @return {Promise<OAuth2Client|null>}
-  */
+   * Reads previously authorized credentials from the save file.
+   * @returns {Promise<OAuth2Client|null>} The authorized client or null if not found.
+   */
   async loadSavedCredentialsIfExist() {
     try {
       const content = await this.vault.adapter.read(this.TOKEN_PATH);
@@ -253,9 +286,8 @@ export class GoogleCalendarSync {
 
   /**
    * Serializes credentials to a file compatible with GoogleAUth.fromJSON.
-   *
-   * @param {OAuth2Client} client
-   * @return {Promise<void>}
+   * @param {OAuth2Client} client The client to serialize.
+   * @returns {Promise<void>}
    */
   async saveCredentials(client: OAuth2Client) {
     const content = await this.vault.adapter.read(this.CREDENTIALS_PATH);
@@ -272,8 +304,8 @@ export class GoogleCalendarSync {
   }
 
   /**
-   * Load or request or authorization to call APIs.
-   *
+   * Load or request authorization to call APIs.
+   * @returns {Promise<OAuth2Client>} The authorized client.
    */
   public async authorize(): Promise<OAuth2Client> {
     let client: OAuth2Client = await this.loadSavedCredentialsIfExist() as OAuth2Client;

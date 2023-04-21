@@ -5,12 +5,14 @@ import { debug } from 'lib/DebugLog';
 import { GoogleCalendarSync } from './GoogleCalendarSync'
 import { ObsidianTasksSync } from './ObsidianTasksSync';
 
+/**
+ * MainSynchronizer class for syncing tasks between Obsidian and Google Calendar
+ */
 export class MainSynchronizer {
   // Create a member variable called "app" of type "App" and initialize it in the constructor
   private app: App;
   private calendarSync: GoogleCalendarSync;
   private obsidianSync: ObsidianTasksSync;
-
 
   /**
    * Constructor for MainSynchronizer class
@@ -22,10 +24,20 @@ export class MainSynchronizer {
     this.obsidianSync = new ObsidianTasksSync(this.app);
   }
 
+  /**
+   * Check if the synchronizer is ready
+   * @returns A promise that resolves to a boolean indicating if the synchronizer is ready
+   */
   public isReady(): Promise<boolean> {
     return this.calendarSync.isReady();
   }
 
+  /**
+   * Push todos to Google Calendar
+   * @param startMoment - The start moment for the sync
+   * @param maxResults - The maximum number of results to retrieve
+   * @param triggeredBy - The trigger for the sync
+   */
   public async pushTodosToCalendar(
     startMoment: moment.Moment,
     maxResults: number = 200,
@@ -38,12 +50,6 @@ export class MainSynchronizer {
 
     // 2. list events in Calendar
     const clEvents = await this.calendarSync.listEvents(startMoment, maxResults);
-    // this.calendarTodos = clEvents.filter((todo) => {
-    //   if (!todo.eventStatus) {
-    //     return true;
-    //   }
-    //   return todo.eventStatus !== "x" && todo.eventStatus !== "X";
-    // });
 
     // 3. push new events to Calendar
     // obTasks -> 
@@ -74,10 +80,14 @@ export class MainSynchronizer {
       }
     });
 
-    // -1. update events in Calendar
-    // this.pullTodosFromCalendar(keyMoment, maxResults);
   }
 
+  /**
+   * Pull todos from Google Calendar
+   * @param startMoment - The start moment for the sync
+   * @param maxResults - The maximum number of results to retrieve
+   * @returns A promise that resolves to an array of todos
+   */
   public async pullTodosFromCalendar(
     startMoment: moment.Moment,
     maxResults: number = 200): Promise<Todo[]> {
@@ -142,6 +152,10 @@ export class MainSynchronizer {
     return clTodos;
   }
 
+/**
+   * Delete a todo from Google Calendar and Obsidian
+   * @param todo - The todo to delete
+   */
   public async deleteTodo(todo: Todo): Promise<void> {
     await this.obsidianSync.deleteTodo(todo)
       .catch((err) => { throw err; });
@@ -149,12 +163,19 @@ export class MainSynchronizer {
       .catch((err) => { throw err; });
   }
 
+  /**
+   * Insert a todo to Google Calendar
+   * @param todo - The todo to insert
+   */
   public async insertTodo(todo: Todo): Promise<void> {
-    // this.obsidianSync
     await this.calendarSync.insertEvent(todo)
       .catch((err) => { throw err; });
   }
 
+  /**
+   * Patch a todo to done in both Google Calendar and Obsidian
+   * @param todo - The todo to patch
+   */
   public async patchTodoToDone(todo: Todo): Promise<void> {
     todo.eventStatus = 'x';
 

@@ -77,7 +77,10 @@ export class Todo {
 
     this.updated = updated;
   }
-
+/**
+   * Update the current Todo object with the values from another Todo object.
+   * @param todo - The Todo object to update from.
+   */
   public updateFrom(todo: Todo) {
     if (todo.content) { this.content = todo.content; }
     if (todo.priority) { this.priority = todo.priority; }
@@ -94,6 +97,10 @@ export class Todo {
     if (todo.updated) { this.updated = todo.updated; }
   }
 
+  /**
+   * Serialize the Todo object's description into a string.
+   * @returns The serialized description string.
+   */
   public serializeDescription(): string {
     return JSON.stringify({
       eventStatus: this.eventStatus ? this.eventStatus : ' ',
@@ -103,6 +110,12 @@ export class Todo {
     });
   }
 
+  /**
+   * Convert a Todo object to a Google Calendar event object.
+   * @param todo - The Todo object to convert.
+   * @returns The Google Calendar event object.
+   * @throws Error if the Todo object is invalid.
+   */
   static toGoogleEvent(todo: Todo): calendar_v3.Schema$Event {
     let todoEvent = {
       'summary': todo.content,
@@ -152,6 +165,12 @@ export class Todo {
     return todoEvent;
   }
 
+  /**
+   * Convert a Google Calendar event object to a Todo object.
+   * @param eventMeta - The Google Calendar event object to convert.
+   * @returns The Todo object.
+   * @throws Error if the eventMeta object is invalid.
+   */
   static fromGoogleEvent(eventMeta: calendar_v3.Schema$Event): Todo {
     let content = eventMeta.summary;
     let calUId = eventMeta.iCalUID;
@@ -239,59 +258,5 @@ export class Todo {
       }
     }
     return false;
-  }
-
-  static todosListsIdentical(oldTasks: Todo[], newTodos: Todo[]): boolean {
-    if (oldTasks.length !== newTodos.length) {
-      return false;
-    }
-    return oldTasks.every((oldTodos, index) => oldTodos.identicalTo(newTodos[index]));
-  }
-
-  public identicalTo(other: Todo) {
-    let args: Array<keyof Todo> = [
-      'content',
-      'priority',
-      'tags',
-      'calUId',
-      'eventId',
-      'path',
-      'blockId',
-      'updated',
-    ];
-    for (const el of args) {
-      if (this[el] !== other[el]) return false;
-    }
-
-    // Compare tags
-    if (this.tags === undefined && other.tags !== undefined) {
-      return false;
-    }
-    if (other.tags === undefined && this.tags !== undefined) {
-      return false;
-    }
-    if (this.tags?.length !== other.tags?.length) {
-      return false;
-    }
-    // Tags are the same only if the values are in the same order
-    if (
-      !this.tags.every(function (element, index) {
-        return element === other.tags[index];
-      })
-    ) {
-      return false;
-    }
-
-    // Compare Date fields
-    args = ['startDateTime', 'scheduledDateTime', 'dueDateTime'];
-    for (const el of args) {
-      const date1 = this[el] as Moment | null;
-      const date2 = other[el] as Moment | null;
-      if (compareByDate(date1, date2) !== 0) {
-        return false;
-      }
-    }
-
-    return true;
   }
 }

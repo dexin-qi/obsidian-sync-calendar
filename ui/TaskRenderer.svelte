@@ -14,7 +14,6 @@
 	export let api: MainSynchronizer;
 	export let plugin: SyncCalendarPlugin;
 	export let todo: Todo;
-	// export let refreshWholeList: () => Promise<void>;
 
 	$: disable = false;
 	$: {
