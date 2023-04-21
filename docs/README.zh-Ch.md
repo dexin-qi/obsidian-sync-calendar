@@ -79,19 +79,7 @@
 
 代码虽然不多，但也花了我近两周的时间，今天分享给大家。如果您能提供一瓶阔乐的赞助，就是我持续更新的动力和赞赏！
 
-<style>
-  .img-container {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .img-container img {
-    max-width: 50%;
-    height: auto;
-  }
-</style>
-
-<div class="img-container">
-  <img src="https://upic-openaccess.oss-cn-beijing.aliyuncs.com/picgo/17272207-36BA-4959-A858-B413CD6D55F4.jpeg" alt="alipay" style="margin:10px">
-  <img src="https://upic-openaccess.oss-cn-beijing.aliyuncs.com/picgo/89A3DC7F-50F3-4F41-B1B1-E8D38DE40572.jpeg" alt="wePay" style="margin:10px">
+<div>
+	<img src="https://upic-openaccess.oss-cn-beijing.aliyuncs.com/picgo/17272207-36BA-4959-A858-B413CD6D55F4.jpeg" alt="alipay" height="250">
+	<img src="https://upic-openaccess.oss-cn-beijing.aliyuncs.com/picgo/89A3DC7F-50F3-4F41-B1B1-E8D38DE40572.jpeg" alt="wePay" height="250">
 </div>
