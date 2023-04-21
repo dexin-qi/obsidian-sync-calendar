@@ -41,7 +41,6 @@
 		if (ct !== undefined) {
 			ct.subscribe(async (value) => {
 				content = value;
-				console.log(content);
 				await renderMarkdown();
 			});
 		}

@@ -1,43 +1,22 @@
 <script lang="ts">
-	import type SyncCalendarPlugin from "main";
-	import { NetworkStatus } from "Syncs/StatusEnumerate";
-	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
-	import { Todo } from "TodoSerialization/Todo";
-
 	import { onMount, onDestroy } from "svelte";
 
+	import type SyncCalendarPlugin from "main";
+	import type { Query } from "Injector/Query";
+	import { Todo } from "TodoSerialization/Todo";
+	import type { MainSynchronizer } from "Syncs/MainSynchronizer";
+
 	import ErrorDisplay from "./ErrorDisplay.svelte";
-	import TaskList from "./TaskList.svelte";
+	import TaskRenderer from "./TaskRenderer.svelte";
 	import NoTaskDisplay from "./NoTaskDisplay.svelte";
 
-	import type { Query } from "Injector/Query";
-
 	export let plugin: SyncCalendarPlugin;
-	export let api: GoogleCalendarSync;
+	export let api: MainSynchronizer;
 	export let query: Query;
 
 	let fetching = false;
 	let eventsList: Todo[] = [];
 	let todos: Todo[] = [];
-
-	$: todos = filterTodos(eventsList);
-
-	function filterTodos(todoList: Todo[]) {
-		if (query && query.timeMax) {
-			return todoList.filter((todo: Todo) => {
-				if (Todo.isDatetime(todo.startDateTime!)) {
-					return window
-						.moment(query.timeMax)
-						.isAfter(window.moment(todo.startDateTime));
-				} else {
-					return window
-						.moment(query.timeMax)
-						.isAfter(window.moment(todo.startDateTime));
-				}
-			});
-		}
-		return todoList;
-	}
 
 	let autoRefreshIntervalId: null | number = null;
 
@@ -45,14 +24,12 @@
 	let fetchedOnce = false;
 	let eventsListTitle: string;
 
+	$: todos = filterTodos(eventsList);
+
 	$: eventsListTitle =
 		query !== undefined && query.name
 			? query.name
-			: "{number} todos in Calendar";
-
-	$: {
-		console.log(query);
-	}
+			: "{numberTodo} todos in Calendar";
 
 	$: {
 		if (autoRefreshIntervalId == null) {
@@ -72,6 +49,23 @@
 		}
 	});
 
+	function filterTodos(todoList: Todo[]) {
+		if (query && query.timeMax) {
+			return todoList.filter((todo: Todo) => {
+				if (Todo.isDatetime(todo.startDateTime!)) {
+					return window
+						.moment(query.timeMax)
+						.isAfter(window.moment(todo.startDateTime));
+				} else {
+					return window
+						.moment(query.timeMax)
+						.isAfter(window.moment(todo.startDateTime));
+				}
+			});
+		}
+		return todoList;
+	}
+
 	async function fetchEventLists() {
 		const apiIsReady = await api.isReady();
 		if (!apiIsReady) {
@@ -82,40 +76,28 @@
 			return;
 		}
 		fetching = true;
-		plugin.syncStatusItem.setText("Sync: 🔽");
 
-		const fetchPromise = plugin
-			.fetchFullTodos(
-				query && query.timeMin
-					? window.moment(query.timeMin)
-					: window.moment().startOf("day"),
-				query && query.timeMin
-					? window.moment.duration(0)
-					: window.moment.duration(
-							plugin.settings.fetchWeeksAgo,
-							"weeks"
-					  ),
-				query && query.maxEvents
-					? query.maxEvents
-					: plugin.settings.fetchMaximumEvents
-			)
+		let startMoment = window.moment().startOf("day");
+		startMoment.subtract(
+			window.moment.duration(plugin.settings.fetchWeeksAgo, "weeks")
+		);
+		if (query && query.timeMin) {
+			startMoment = window.moment(query.timeMin);
+		}
+
+		const maxEvents =
+			query && query.maxEvents
+				? query.maxEvents
+				: plugin.settings.fetchMaximumEvents;
+
+		const fetchPromise = api
+			.pullTodosFromCalendar(startMoment, maxEvents)
 			.then((newEventsList) => {
 				eventsList = newEventsList;
 				fetchedOnce = true;
-				plugin.netStatus = NetworkStatus.HEALTH;
-				plugin.syncStatusItem.setText("Sync: 🆗");
-				console.info(
-					`Successfully Fetched ${eventsList.length} events`
-				);
 			})
 			.catch((err) => {
-				console.error(err);
-				plugin.netStatus = NetworkStatus.CONNECTION_ERROR;
-				throw new err();
-				// Error(
-				// 	"We are currently unable to \
-				//   fetch events list from Google calendar."
-				// );
+				throw err;
 			});
 
 		const timeoutPromise = new Promise((resolve, reject) => {
@@ -132,14 +114,13 @@
 
 		await Promise.race([fetchPromise, timeoutPromise])
 			.then(() => {
-				fetching = false;
 				error_info = null;
 			})
 			.catch((err) => {
-				fetching = false;
 				error_info = err;
-				plugin.netStatus = NetworkStatus.CONNECTION_ERROR;
-				plugin.syncStatusItem.setText("Sync: 🆖");
+			})
+			.finally(() => {
+				fetching = false;
 			});
 	}
 </script>
@@ -176,8 +157,14 @@
 	{#if fetchedOnce}
 		{#if eventsList.length == 0}
 			<NoTaskDisplay />
+		{:else if todos.length != 0}
+			<ul class="contains-todo-list todo-list-todo-list">
+				{#each todos as todo (todo.calUId)}
+					<TaskRenderer {api} {plugin} {todo} />
+				{/each}
+			</ul>
 		{:else}
-			<TaskList {api} {plugin} {todos} />
+			<NoTaskDisplay />
 		{/if}
 	{/if}
 </div>

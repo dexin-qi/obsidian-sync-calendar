@@ -1,24 +1,23 @@
 import {
-  App,
-  MarkdownPostProcessorContext,
+  type MarkdownPostProcessorContext,
   MarkdownRenderChild,
 } from "obsidian";
+import type { SvelteComponentDev } from "svelte/internal";
 
 import type SyncCalendarPlugin from "main";
-import type GoogleCalendarSync from "../Syncs/GoogleCalendarSync";
+import type { MainSynchronizer } from "Syncs/MainSynchronizer";
+import CalendarQuery from "ui/CalendarQuery.svelte";
+import ErrorDisplay from "ui/ErrorDisplay.svelte";
+import { debug } from "lib/DebugLog";
 
 import { parseQuery } from "./Parser";
-import { Query } from "./Query";
-
-import TodoistQuery from "../ui/TodoistQuery.svelte";
-import ErrorDisplay from "../ui/ErrorDisplay.svelte";
-import type { SvelteComponentDev } from "svelte/internal";
+import type { Query } from "./Query";
 
 export default class QueryInjector {
   private pendingQueries: PendingQuery[];
 
   private plugin: SyncCalendarPlugin;
-  private calendarSync: GoogleCalendarSync;
+  private mainSync: MainSynchronizer
 
   constructor(plugin: SyncCalendarPlugin) {
     this.plugin = plugin;
@@ -31,9 +30,8 @@ export default class QueryInjector {
       target: el,
       ctx: ctx,
     };
-    // console.log('source: ' + source);
 
-    if (typeof this.calendarSync == "undefined") {
+    if (typeof this.mainSync == "undefined") {
       this.pendingQueries.push(pendingQuery);
       return;
     }
@@ -41,8 +39,8 @@ export default class QueryInjector {
     this.injectQuery(pendingQuery);
   }
 
-  setCalendarSync(calendarSync: GoogleCalendarSync) {
-    this.calendarSync = calendarSync;
+  setMainSync(mainSync: MainSynchronizer) {
+    this.mainSync = mainSync;
 
     while (this.pendingQueries.length > 0) {
       this.injectQuery(this.pendingQueries[0]);
@@ -60,29 +58,28 @@ export default class QueryInjector {
       }
 
       child = new InjectedQuery(pendingQuery.target, (root: HTMLElement) => {
-        return new TodoistQuery({
+        return new CalendarQuery({
           target: root,
           props: {
             plugin: this.plugin,
-            api: this.calendarSync,
+            api: this.mainSync,
             query: query,
           },
         });
       });
     }
-    catch (e) {
-      console.error(e);
+    catch (err) {
+      debug(`query error: ${err}`);
 
       child = new InjectedQuery(pendingQuery.target, (root: HTMLElement) => {
         return new ErrorDisplay({
           target: root,
           props: {
-            error: e
+            error: err
           },
         });
       });
     }
-
 
     pendingQuery.ctx.addChild(child);
   }

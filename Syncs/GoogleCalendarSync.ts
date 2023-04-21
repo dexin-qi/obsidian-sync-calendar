@@ -1,17 +1,24 @@
-import { Vault, Notice, FileSystemAdapter, moment } from 'obsidian';
+import type { App, Vault, Notice, FileSystemAdapter } from 'obsidian';
 import { authenticate } from '@google-cloud/local-auth';
 import { google } from 'googleapis';
+import type { OAuth2Client, GaxiosPromise, GaxiosResponse } from 'googleapis-common';
+import type { calendar_v3 } from 'googleapis';
 
 import { Todo } from 'TodoSerialization/Todo';
-import ConcurrentQueue from 'lib/QueueTools';
+import { debug } from 'lib/DebugLog';
+
+import {
+  NetworkStatus,
+  SyncStatus,
+  gfSyncStatus$,
+  gfNetStatus$
+} from './StatusEnumerate';
 
 const path = require('path');
 
-export default class GoogleCalendarSync {
+export class GoogleCalendarSync {
   vault: Vault;
 
-  public doneEventsQueue: ConcurrentQueue<Todo>;
-  public deleteEventsQueue: ConcurrentQueue<Todo>;
 
   // If modifying these scopes, delete token.json.
   public SCOPES = ['https://www.googleapis.com/auth/calendar'];
@@ -21,276 +28,205 @@ export default class GoogleCalendarSync {
   private TOKEN_PATH = ""
   private CREDENTIALS_PATH = ""
 
-  constructor(vault: Vault) {
-    this.vault = vault
-    console.log("vault.configDir: " + vault.configDir)
-    this.TOKEN_PATH = path.join(vault.configDir, 'calendar.sync.token.json');
-    this.CREDENTIALS_PATH = path.join(vault.configDir, 'calendar.sync.credentials.json');
+  constructor(app: App) {
+    this.vault = app.vault
 
-    this.doneEventsQueue = new ConcurrentQueue<Todo>(this.patchEventToDone.bind(this));
-    this.deleteEventsQueue = new ConcurrentQueue<Todo>(this.deleteEvent.bind(this));
+    this.TOKEN_PATH = path.join(this.vault.configDir, 'calendar.sync.token.json');
+    this.CREDENTIALS_PATH = path.join(this.vault.configDir, 'calendar.sync.credentials.json');
   }
 
-
-  async fetchTodos(keyMoment: moment.Moment, timeWindowBiasAhead: moment.Duration, max_results: number = 20): Promise<Todo[]> {
+  // 返回完成/未完成的 events
+  async listEvents(startMoment: moment.Moment, maxResults: number = 200): Promise<Todo[]> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
 
-    let eventsMetaList: any[] | undefined = undefined;
+    gfSyncStatus$.next(SyncStatus.DOWNLOAD);
+    const eventsListQueryResult =
+      await calendar.events
+        .list({
+          calendarId: 'primary',
+          timeMin: startMoment.toISOString(),
+          maxResults: maxResults,
+          singleEvents: true,
+          orderBy: 'startTime',
+        })
+        .catch(err => {
+          gfNetStatus$.next(NetworkStatus.CONNECTION_ERROR);
+          gfSyncStatus$.next(SyncStatus.FAILED_WARNING);
+          throw err;
+        });
+    gfNetStatus$.next(NetworkStatus.HEALTH);
+    gfSyncStatus$.next(SyncStatus.SUCCESS_WAITING);
 
-    const startMoment = keyMoment.subtract(timeWindowBiasAhead);
-    // console.debug(startMoment.toISOString());
-
-    // TODO: fetch none networks
-    const eventsListQueryResult = await calendar.events.list({
-      calendarId: 'primary',
-      timeMin: startMoment.toISOString(),
-      maxResults: max_results,
-      singleEvents: true,
-      orderBy: 'startTime',
-    }).catch(err => { throw err; });
-
-    eventsMetaList = eventsListQueryResult.data.items;
-
-    // CalUID 和 id 的区别: 在重复发生的事件中，
-    // 每个事件有不同的 id，但是共享相同的icalUID
-    // window.moment().format('YYYY-MM-DD[T]HH:mm:ssZ')
-    // const eventsMetaList = eventsListQueryResult.data.items;
-
+    let eventsMetaList = eventsListQueryResult.data.items;
     let eventsList: Todo[] = [];
+
     if (eventsMetaList != undefined) {
-      eventsMetaList.forEach((eventMeta) => {
-        if (eventMeta.kind !== "calendar#event") {
-          return;
-        }
-
-        let content = eventMeta.summary;
-        let calUId = eventMeta.iCalUID;
-        let eventId = eventMeta.id;
-        let eventHtmlLink = eventMeta.htmlLink;
-        let eventStatus = "";
-        let blockId = undefined;
-        let priority = undefined;
-        let startDateTime: string;
-        let dueDateTime: string;
-        let tags: string[] = [];
-        let updated: string | undefined = undefined;
-
-        if (eventMeta.description !== null && eventMeta.description !== undefined) {
-          eventMeta.description = eventMeta.description.replace(/<\/?span>/g, '');
-          try {
-            blockId = JSON.parse(eventMeta.description).blockId;
-          } catch (e) { console.error(e); }
-          try {
-            priority = JSON.parse(eventMeta.description).priority;
-          } catch (e) { console.error(e); }
-          try {
-            eventStatus = JSON.parse(eventMeta.description).eventStatus;
-          } catch (e) { console.error(e); }
-          try {
-            tags = JSON.parse(eventMeta.description).tags;
-          } catch (e) { console.error(e); }
-        }
-        if (eventStatus === "done") {
-          return;
-        }
-
-        if (eventMeta.start.dateTime === null || eventMeta.start.dateTime === undefined) {
-          startDateTime = window.moment(eventMeta.start.date).format('YYYY-MM-DD');
-        } else {
-          startDateTime = window.moment(eventMeta.start.dateTime).format('YYYY-MM-DD[T]HH:mm:ssZ');
-        }
-
-        if (eventMeta.end.dateTime === null || eventMeta.end.dateTime === undefined) {
-          dueDateTime = window.moment(eventMeta.end.date).format('YYYY-MM-DD');
-        } else {
-          dueDateTime = window.moment(eventMeta.end.dateTime).format('YYYY-MM-DD[T]HH:mm:ssZ');
-        }
-
-        if (eventMeta.updated) {
-          updated = window.moment(eventMeta.updated).format('YYYY-MM-DD[T]HH:mm:ssZ');
-        }
-
-        eventsList.push(
-          new Todo({
-            content,
-            priority,
-            blockId,
-            startDateTime,
-            dueDateTime,
-            calUId,
-            eventId,
-            eventStatus,
-            eventHtmlLink,
-            updated,
-            tags
-          })
-        );
-
+      eventsMetaList.forEach((eventMeta: calendar_v3.Schema$Event) => {
+        eventsList.push(Todo.fromGoogleEvent(eventMeta));
       });
     }
 
-    return new Promise((resolve, reject) => {
-      resolve(eventsList);
-    });
+    return eventsList;
   }
 
 
-  async pushTodos(todos: Todo[]) {
+  async insertEvent(todo: Todo) {
     let auth = await this.authorize();
-    const calendar = google.calendar({ version: 'v3', auth });
-
-    todos.forEach(async (todo) => {
-      let todoEvent = {
-        'summary': todo.content,
-        'description': todo.serializeDescription(),
-        'start': {},
-        'end': {},
-        'reminders': {
-          'useDefault': false,
-          'overrides': [
-            { 'method': 'popup', 'minutes': 10 },
-          ],
-        },
-      };
-
-      let isValidInterval = false;
-      const regDateTime = /(\d{4}-\d{2}-\d{2}T\d+:\d+)/u;
-      if (todo.startDateTime?.match(regDateTime) && todo.dueDateTime?.match(regDateTime)) {
-        isValidInterval = true;
-      }
-
-      let isValidEvent = false;
-      if (isValidInterval) {
-        todoEvent.start.dateTime = todo.startDateTime;
-        todoEvent.end.dateTime = todo.dueDateTime;
-        isValidEvent = true;
-      } else {
-        const regDate = /(\d{4}-\d{2}-\d{2})/u;
-        if (todo.startDateTime) {
-          let startDateMatch = todo.startDateTime.match(regDate);
-          let endDateMatch = todo.dueDateTime?.match(regDate);
-          if (startDateMatch) {
-            todoEvent.start.date = startDateMatch[1];
-            todoEvent.end.date = endDateMatch ? endDateMatch[1] : startDateMatch[1];
-            isValidEvent = true;
-          } else if (endDateMatch) {
-            todoEvent.start.date = endDateMatch[1];
-            todoEvent.end.date = endDateMatch[1];
-          }
-        }
-      }
-      if (isValidEvent) {
-        todoEvent.start.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        todoEvent.end.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      } else {
-        new Notice(`Invalid todo event ${todo.content}`);
-      }
-
-      let retryTimes = 0;
-      let isInsertSuccess = false;
-      while (retryTimes < 20 && !isInsertSuccess) {
-        ++retryTimes;
-        await this.insertEvent(calendar, auth, todoEvent)
-          .then((event) => {
-            isInsertSuccess = true;
-            console.info(`Added event: ${todoEvent.summary}! link: ${event.data.htmlLink}`);
-          }).catch(async (error) => {
-            console.error('Error on inserting event:', error);
-            await new Promise(resolve => setTimeout(resolve, 100));
-          });
-      } // retry loop
-    }); // todos <for each>
-  }
-
-  async patchEventToDone(todo: Todo): Promise<boolean> {
-    let auth = await this.authorize();
-    const calendar = google.calendar({ version: 'v3', auth });
-
-    todo.eventStatus = 'done';
-    const eventDescUpdate = todo.serializeDescription();
+    const calendar: calendar_v3.Calendar = google.calendar({ version: 'v3', auth });
 
     let retryTimes = 0;
-    let isPatchSuccess = false;
-    while (retryTimes < 20 && !isPatchSuccess) {
+    let isInsertSuccess = false;
+    gfSyncStatus$.next(SyncStatus.UPLOAD);
+    while (retryTimes < 20 && !isInsertSuccess) {
       ++retryTimes;
-
-      await this.patchEvent(
-        calendar,
-        auth,
-        todo.eventId,
-        {
-          "summary": `✅ ${todo.content}`,
-          "description": eventDescUpdate,
-        }
-      ).then(() => {
-        isPatchSuccess = true;
-        console.info(`Patched event: ${todo.content}!`);
-      }).catch(async (error) => {
-        console.error('Error on patching event:', error);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      });
+      await calendar.events
+        .insert({
+          auth: auth,
+          calendarId: 'primary',
+          resource: Todo.toGoogleEvent(todo)
+        } as calendar_v3.Params$Resource$Events$Insert
+        )
+        .then((event) => {
+          isInsertSuccess = true;
+          debug(`Added event: ${todo.content}! link: ${event.data.htmlLink}`);
+          return;
+        }).catch(async (error) => {
+          debug('Error on inserting event:', error);
+          await new Promise(resolve => setTimeout(resolve, 100));
+        });
     }
-    return isPatchSuccess;
+
+    if (isInsertSuccess) {
+      gfSyncStatus$.next(SyncStatus.SUCCESS_WAITING);
+      gfNetStatus$.next(NetworkStatus.HEALTH);
+    } else {
+      gfSyncStatus$.next(SyncStatus.FAILED_WARNING);
+      gfNetStatus$.next(NetworkStatus.CONNECTION_ERROR);
+      throw Error(`Failed to insert event: ${todo.content}`);
+    }
   }
 
-  // TODO: 参考这里整理其他部分的代码风格。
-  async deleteEvent(todo: Todo): Promise<boolean> {
+
+  async deleteEvent(todo: Todo): Promise<void> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
 
     let retryTimes = 0;
     let isDeleteSuccess = false;
+    gfSyncStatus$.next(SyncStatus.UPLOAD);
     while (retryTimes < 20 && !isDeleteSuccess) {
       ++retryTimes;
 
       await calendar.events
-        .delete({ auth: auth, calendarId: 'primary', eventId: todo.eventId })
+        .delete({
+          auth: auth,
+          calendarId: 'primary',
+          eventId: todo.eventId
+        } as calendar_v3.Params$Resource$Events$Delete)
         .then(() => {
           isDeleteSuccess = true;
-          console.info(`Deleted event: ${todo.content}!`);
+          debug(`Deleted event: ${todo.content}!`);
+          return;
         }).catch(async (err) => {
-          console.error('Error on delete event:', err);
+          debug(`Error on delete event: ${err}`);
           await new Promise(resolve => setTimeout(resolve, 100));
         });
     }
-    return isDeleteSuccess;
-  }
-
-  private async insertEvent(calendar, auth, eventMeta) {
-    return new Promise((resolve, reject) => {
-      calendar.events.insert({
-        auth: auth,
-        calendarId: 'primary',
-        resource: eventMeta,
-      }, function (err, res) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(res);
-        }
-      });
-    });
-  }
-
-  private async patchEvent(calendar, auth, eventId, eventResource) {
-    return new Promise(async (resolve, reject) => {
-      await calendar.events.patch({
-        auth: auth,
-        calendarId: 'primary',
-        eventId: eventId,
-        resource: eventResource
-      }, function (err, res) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(res);
-        }
-      })
-    });
+    if (isDeleteSuccess) {
+      gfSyncStatus$.next(SyncStatus.SUCCESS_WAITING);
+      gfNetStatus$.next(NetworkStatus.HEALTH);
+    } else {
+      gfSyncStatus$.next(SyncStatus.FAILED_WARNING);
+      gfNetStatus$.next(NetworkStatus.CONNECTION_ERROR);
+      throw Error(`Failed to delete event: ${todo.content}`);
+    }
   }
 
 
+  async patchEvent(todo: Todo, getEventPatch: (todo: Todo) => calendar_v3.Schema$Event): Promise<void> {
+    let auth = await this.authorize();
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    let retryTimes = 0;
+    let isPatchSuccess = false;
+    gfSyncStatus$.next(SyncStatus.UPLOAD);
+    while (retryTimes < 20 && !isPatchSuccess) {
+      ++retryTimes;
+
+      let x = getEventPatch(todo);
+
+      await calendar.events
+        .patch({
+          auth: auth,
+          calendarId: 'primary',
+          eventId: todo.eventId,
+          resource: getEventPatch(todo)
+        } as calendar_v3.Params$Resource$Events$Patch)
+        .then(() => {
+          isPatchSuccess = true;
+          debug(`Patched event: ${todo.content}`);
+          return;
+        })
+        .catch(async (error) => {
+          debug(`Error on patching event: ${error}`);
+          await new Promise(resolve => setTimeout(resolve, 100));
+        });
+    }
+
+    if (isPatchSuccess) {
+      gfSyncStatus$.next(SyncStatus.SUCCESS_WAITING);
+      gfNetStatus$.next(NetworkStatus.HEALTH);
+    } else {
+      gfSyncStatus$.next(SyncStatus.FAILED_WARNING);
+      gfNetStatus$.next(NetworkStatus.CONNECTION_ERROR);
+      throw Error(`Failed on patched event: ${todo.content}`);
+    }
+  }
+
+
+  static getEventDonePatch(todo: Todo): calendar_v3.Schema$Event {
+    if (!todo.eventStatus) {
+      todo.eventStatus = 'x';
+    }
+    if (['!', '?', '>', '-', ' '].indexOf(todo.eventStatus) < 0) {
+      todo.eventStatus = 'x';
+    }
+
+    const eventDescUpdate = todo.serializeDescription();
+    switch (todo.eventStatus) {
+      case '-':
+        return {
+          "summary": `🚫 ${todo.content}`,
+          "description": eventDescUpdate,
+        } as calendar_v3.Schema$Event;
+      case '!':
+        return {
+          "summary": `❗️ ${todo.content}`,
+          "description": eventDescUpdate,
+        } as calendar_v3.Schema$Event;
+      case '>':
+        return {
+          "summary": `💤 ${todo.content}`,
+          "description": eventDescUpdate,
+        } as calendar_v3.Schema$Event;
+      case '?':
+        return {
+          "summary": `❓ ${todo.content}`,
+          "description": eventDescUpdate,
+        } as calendar_v3.Schema$Event;
+      case 'x':
+      case 'X':
+        return {
+          "summary": `✅ ${todo.content}`,
+          "description": eventDescUpdate,
+        } as calendar_v3.Schema$Event;
+    }
+    return {
+      "summary": `✅ ${todo.content}`,
+      "description": eventDescUpdate,
+    } as calendar_v3.Schema$Event;
+  }
 
   async isReady(): Promise<boolean> {
     const client = await this.loadSavedCredentialsIfExist();
@@ -307,7 +243,6 @@ export default class GoogleCalendarSync {
   */
   async loadSavedCredentialsIfExist() {
     try {
-      // console.log('token path: ' + this.TOKEN_PATH);
       const content = await this.vault.adapter.read(this.TOKEN_PATH);
       const credentials = JSON.parse(content);
       return google.auth.fromJSON(credentials);
@@ -322,17 +257,17 @@ export default class GoogleCalendarSync {
    * @param {OAuth2Client} client
    * @return {Promise<void>}
    */
-  async saveCredentials(client) {
+  async saveCredentials(client: OAuth2Client) {
     const content = await this.vault.adapter.read(this.CREDENTIALS_PATH);
     const keys = JSON.parse(content);
     const key = keys.installed || keys.web;
+
     const payload = JSON.stringify({
       type: 'authorized_user',
       client_id: key.client_id,
       client_secret: key.client_secret,
       refresh_token: client.credentials.refresh_token,
     });
-    console.log('cache in: ' + this.TOKEN_PATH);
     await this.vault.adapter.write(this.TOKEN_PATH, payload);
   }
 
@@ -340,15 +275,14 @@ export default class GoogleCalendarSync {
    * Load or request or authorization to call APIs.
    *
    */
-  public async authorize() {
-    let client = await this.loadSavedCredentialsIfExist()
+  public async authorize(): Promise<OAuth2Client> {
+    let client: OAuth2Client = await this.loadSavedCredentialsIfExist() as OAuth2Client;
     if (client) {
       return client;
     }
 
     const fs_adapter = this.vault.adapter as FileSystemAdapter;
     const KEY_FILE = fs_adapter.getFullPath(this.CREDENTIALS_PATH);
-    console.log("file path: " + KEY_FILE);
     client = await authenticate({
       scopes: this.SCOPES,
       keyfilePath: KEY_FILE,
