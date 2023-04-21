@@ -1,96 +1,98 @@
-# Obsidian Sample Plugin
-thanks to the brilliant plugins obsidian-todoist %% <a herf=""> %%
-This is a sample plugin for Obsidian (https://obsidian.md).
+# Obsidian x Calendar Plugin
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+An [Obsidian](https://obsidian.md/) plugin to materialize [Google Calendar](https://calendar.google.com/) events in Obsidian notes. [中文](./dcos/README.zh-Ch.md)
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Changes the default font color to red using `styles.css`.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/dustinksi/obsidian-sync-calendar/release.yml?style=shield) ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/dustinksi/obsidian-sync-calendar?display_name=tag)
 
-## First time developing plugins?
 
-Quick starting guide for new plugin devs:
+**Note**: 
+1. Our task format is borrowed from tasks, but we **do not support recurring tasks** at the moment.
+2. To sync tasks from Obsidian to the calendar, you need to attach a start time element to the task (i.e. 🛫 YYYY-MM-DD), then click the sync icon or call the `Sync with Calendar` command.
+3. Our task synchronization is **centered around calendar events**, which means that after syncing tasks from Obsidian to the calendar, modifications to tasks in Obsidian will not be synced to the calendar. To further modify the schedule, you need to modify it directly in the calendar. The changes made in the calendar will be automatically synced back to Obsidian later.
+4. This plugin is still in early alpha and is subject to change at any time!
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
 
-## Releasing new releases
+![RELEASE DEMO](https://upic-openaccess.oss-cn-beijing.aliyuncs.com/picgo/README_DEMO.gif)
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## Installation & Usage
 
-## Adding your plugin to the community plugin list
+### First of All
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+- You need a Google Calendar credentials file. You can apply for it yourself:
+    - Refer [create project guide](https://developers.google.com/workspace/guides/create-project) to create a Google Cloud Project
+    - Refer [enable apis guide](https://developers.google.com/workspace/guides/enable-apis) to enable your Google Calendar's API.
+    - [Configure OA Screen](https://console.cloud.google.com/apis/credentials/consent?)
+    - [Prepare to get your OA credentials](https://console.cloud.google.com/apis/credentials/oauthclient)
+      - Select "Desktop Application"
+      - Input a name for this OA Application.
+      - Download the OAClient credentials file.
+- Place the credentials file in `VaultFolder/.obsidian/calendar.sync.credentials.json`
 
-## How to use
+### Manually installing the plugin
 
+- Download `main.js`, `styles.css`, `manifest.json` from the [release page](https://github.com/dustinksi/obsidian-sync-calendar/releases).
+- Copy the downloaded files to `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+
+**Note**: You can also compile this plugin yourself:
 - Clone this repo.
-- `npm i` or `yarn` to install dependencies
-- `npm run dev` to start compilation in watch mode.
+- Run `npm i` or `yarn` to install dependencies.
+- Run `npm run dev` to start compilation in watch mode.
 
-## Manually installing the plugin
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+### ~~From Obsidian Community Plugins Broswer (Not Avaliable for now.)~~
+- ~~Install the plugin through the Obsidian's community plugins browser.~~
+- ~~Enable the plugin in Obsidian.~~
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+### Use this Plugin
+- Place a code block like the following in any note:
+   ````markdown
+   ```calendar-sync
+   name: "{numberTodo} todos @ Apr. 21",
+   timeMin: "2023-04-21"
+   timeMax: "2023-04-22"
+   ```
+   ````
+- Swap to preview mode and the plugin should replace this code block with the materialized result.
 
-## Funding URL
+> If you are synchronizing your vault, I recommend explicitly ignoring the `VaultFolder/.obsidian/calendar.sync.token.json` file for security reasons, if possible.
 
-You can include funding URLs where people who use your plugin can financially support it.
+## Inputs
+| Name |  Type | Description | Default |
+| ------------- | ---- | -------- | ------- |
+| `name`        | string        | The title for the query. You can use the `{numberTodos}` template which will be replaced by the number of todos returned by the query.        | {numberTodos} todos in calendar         |
+| `timeMin`      |      string   | A string that conforms to moment.js, the minimum time (including `timeMin`) for events.     |      One week before the current time   |
+| `timeMax` |      string    |  A string that conforms to moment.js, the maximum time (excluding `timeMax`) for events.   | null    |
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+**Note**: 排序，过滤，按照标签等分组将在下一个版本推出，同时非常欢迎您提交 [Pull Request]()。
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+## Command
 
-If you have multiple URLs, you can also do:
+Currently, only one command is supported, which is used to manually trigger the synchronization of tasks from Obsidian to Calendar.
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+`Sync with Calendar`:
 
-## API Documentation
+   This command will fetch tasks with a startDate (i.e. 🛫 YYYY-MM-DD) in Obsidian.
 
-See https://github.com/obsidianmd/obsidian-api
+
+## Thanks to  
+
+The brilliant plugins:
+
+[obsidian-todoist](https://github.com/jamiebrynes7/obsidian-todoist-plugin)
+
+[obsidian-tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) 
+
+[obsidian-dataview](https://github.com/blacksmithgu/obsidian-dataview)
+
+This plugin has borrowed a lot of valuable experience from the above plugins.
+
+And I would also like to thank Wang Jiayu for accompanying me through the conception, design, and development of this plugin.
+
+
+## Support
+
+Have you found the obsidian-sync-calendar plugin helpful and want to support it? I accept donations that will go towards future development efforts. I generally do not accept payment for bug bounties/feature requests, as financial incentives add stress/expectations which I want to avoid for a hobby project!
+
+<a href="https://www.buymeacoffee.com/dexin.qi"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a cocacola&emoji=🥤&slug=dexin.qi&button_colour=FF5F5F&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00" /></a> 

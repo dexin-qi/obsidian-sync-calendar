@@ -1,20 +1,19 @@
 <script lang="ts">
-	import { Menu, Notice } from "obsidian";
+	import { Menu } from "obsidian";
 	import { fade } from "svelte/transition";
 	import { writable } from "svelte/store";
-
-	import type SyncCalendarPlugin from "main";
-	import { Todo } from "../TodoSerialization/Todo";
-	import { openExternal } from "../lib/OpenExternal";
-	import type GoogleCalendarSync from "Syncs/GoogleCalendarSync";
-	import { contentStore } from "./ContentStore";
-
 	import MarkdownRenderer from "./MarkdownRenderer.svelte";
 
-	export let api: GoogleCalendarSync;
+	import type SyncCalendarPlugin from "main";
+	import { contentStore } from "./ContentStore";
+
+	import { openExternal } from "lib/OpenExternal";
+	import { Todo } from "TodoSerialization/Todo";
+	import type { MainSynchronizer } from "Syncs/MainSynchronizer";
+
+	export let api: MainSynchronizer;
 	export let plugin: SyncCalendarPlugin;
 	export let todo: Todo;
-	// export let refreshWholeList: () => Promise<void>;
 
 	$: disable = false;
 	$: {
@@ -32,12 +31,12 @@
 	}
 
 	function getTodoContent(todo: Todo): string {
-		// console.log(todo);
 		if (todo.content) {
 			return todo.content;
 		}
 		return "Invalid Todo Title";
 	}
+
 	// For some reason, the Todoist API returns priority in reverse order from
 	// the p1/p2/p3/p4 fluent entry notation.
 	function getPriorityClass(priority: null | undefined | string): string {
@@ -57,18 +56,7 @@
 	}
 
 	async function onClickTask(todo: Todo) {
-		api.doneEventsQueue.enqueue(todo);
-		//TODO: move this to queue operation
-		// console.log(todo);
-		if (todo.path && todo.path !== null && todo.path !== undefined) {
-			if (
-				todo.blockId &&
-				todo.blockId !== null &&
-				todo.blockId !== undefined
-			) {
-				plugin.obsidianSync.patchTodoToDone(todo);
-			}
-		}
+		api.patchTodoToDone(todo);
 	}
 
 	function onClickTaskContainer(evt: MouseEvent) {
@@ -82,21 +70,7 @@
 				.setTitle("Delete todo")
 				.setIcon("popup-open")
 				.onClick(() => {
-					api.deleteEventsQueue.enqueue(todo);
-					if (
-						todo.path &&
-						todo.path !== null &&
-						todo.path !== undefined
-					) {
-						// FIXME: if user sync -> refresh -> move todo to another line
-						if (
-							todo.blockId &&
-							todo.blockId !== null &&
-							todo.blockId !== undefined
-						) {
-							plugin.obsidianSync.deleteTodo(todo);
-						}
-					}
+					api.deleteTodo(todo);
 				})
 		);
 
@@ -159,35 +133,6 @@
 		/>
 	</div>
 	<div class="todo-metadata">
-		<!-- {#if plugin.settings.renderProject && renderProject}
-			<div class="todo-project">
-				{#if plugin.settings.renderProjectIcon}
-					<svg
-						class="todo-project-icon"
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v7h-2l-1 2H8l-1-2H5V5z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				{/if}
-				{metadata.projects.get_or_default(
-					todo.projectID,
-					UnknownProject
-				).name}
-				{#if todo.sectionID}
-					|
-					{metadata.sections.get_or_default(
-						todo.sectionID,
-						UnknownSection
-					).name}
-				{/if}
-			</div>
-		{/if} -->
 		{#if plugin.settings.renderDate && todo.startDateTime}
 			<div class="todo-date {todo.isOverdue() ? 'todo-overdue' : ''}">
 				<svg

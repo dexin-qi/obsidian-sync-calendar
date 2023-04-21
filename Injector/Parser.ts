@@ -2,6 +2,9 @@ import { isSortingOption, sortingOptions } from "./Query";
 import type { Query } from "./Query";
 import YAML from "yaml";
 
+/**
+ * Custom error class for parsing errors
+ */
 export class ParsingError extends Error {
   inner: Error | undefined;
 
@@ -19,6 +22,12 @@ export class ParsingError extends Error {
   }
 }
 
+/**
+ * Parses a raw string into a Query object
+ * @param raw - the raw string to parse
+ * @returns the parsed Query object
+ * @throws ParsingError if the raw string cannot be parsed
+ */
 export function parseQuery(raw: string): Query {
   let obj: any;
 
@@ -35,6 +44,12 @@ export function parseQuery(raw: string): Query {
   return parseObject(obj);
 }
 
+/**
+ * Attempts to parse a raw string as JSON
+ * @param raw - the raw string to parse
+ * @returns the parsed JSON object
+ * @throws ParsingError if the raw string is not valid JSON
+ */
 function tryParseAsJson(raw: string): any {
   try {
     return JSON.parse(raw);
@@ -43,6 +58,12 @@ function tryParseAsJson(raw: string): any {
   }
 }
 
+/**
+ * Attempts to parse a raw string as YAML
+ * @param raw - the raw string to parse
+ * @returns the parsed YAML object
+ * @throws ParsingError if the raw string is not valid YAML
+ */
 function tryParseAsYaml(raw: string): any {
   try {
     return YAML.parse(raw);
@@ -51,6 +72,12 @@ function tryParseAsYaml(raw: string): any {
   }
 }
 
+/**
+ * Parses a generic object into a Query object
+ * @param query - the object to parse
+ * @returns the parsed Query object
+ * @throws ParsingError if the object is not a valid Query object
+ */
 function parseObject(query: any): Query {
   if (query.hasOwnProperty("name") && typeof query.name !== "string") {
     throw new ParsingError("'name' field must be a string");
@@ -107,6 +134,10 @@ function parseObject(query: any): Query {
   return query as Query;
 }
 
+/**
+ * Formats the sorting options as a string
+ * @returns the formatted string of sorting options
+ */
 function formatSortingOpts(): string {
   return sortingOptions.map((e) => `'${e}'`).join(", ");
 }
