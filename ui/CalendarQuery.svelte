@@ -29,7 +29,7 @@
 	$: eventsListTitle =
 		query !== undefined && query.name
 			? query.name
-			: "{numberTodo} todos in Calendar";
+			: "{numberTodos} todos in calendar";
 
 	$: {
 		if (autoRefreshIntervalId == null) {
@@ -128,7 +128,7 @@
 <div>
 	{#if eventsListTitle.length > 0}
 		<h4 class="todo-list-query-title">
-			{eventsListTitle.replace("{numberTodo}", todos.length.toString())}
+			{eventsListTitle.replace("{numberTodos}", todos.length.toString())}
 		</h4>
 	{/if}
 	<button
