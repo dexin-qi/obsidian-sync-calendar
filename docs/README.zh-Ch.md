@@ -66,7 +66,7 @@
 | `timeMin` | string | 符合 moment.js 格式的字符串，事件的最小时间（包括 `timeMin`）。 | 基于查询时间向前四周 |
 | `timeMax` | string | 符合 moment.js 格式的字符串，事件的最大时间（不包括 `timeMax`）。 | null |
 
-**Note**: `sort`，`filter`，`group` 将在下一个版本推出，同时非常欢迎您提交 [Pull Request]()。
+**Note**: `sort`，`filter`，`group` 将在下一个版本推出，同时非常欢迎您提交 Pull Request。
 ## 命令
 
 目前，仅支持一个命令，用于手动触发从Obsidian到Calendar的任务同步。

@@ -1,6 +1,6 @@
 # Obsidian x Calendar Plugin
 
-An [Obsidian](https://obsidian.md/) plugin to materialize [Google Calendar](https://calendar.google.com/) events in Obsidian notes. [中文](./dcos/README.zh-Ch.md)
+An [Obsidian](https://obsidian.md/) plugin to materialize [Google Calendar](https://calendar.google.com/) events in Obsidian notes. [中文](./docs/README.zh-Ch.md)
 
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/dustinksi/obsidian-sync-calendar/release.yml?style=shield) ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/dustinksi/obsidian-sync-calendar?display_name=tag)
@@ -65,7 +65,7 @@ An [Obsidian](https://obsidian.md/) plugin to materialize [Google Calendar](http
 | `timeMin`      |      string   | A string that conforms to moment.js, the minimum time (including `timeMin`) for events.     |      One week before the current time   |
 | `timeMax` |      string    |  A string that conforms to moment.js, the maximum time (excluding `timeMax`) for events.   | null    |
 
-**Note**: 排序，过滤，按照标签等分组将在下一个版本推出，同时非常欢迎您提交 [Pull Request]()。
+**Note**: `sort`, `filter`，`group` are features which will be released in next version. Welcome to contribute!
 
 ## Command
 
