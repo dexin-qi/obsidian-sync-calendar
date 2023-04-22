@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import type { App, Vault, Notice, FileSystemAdapter } from 'obsidian';
 import { authenticate } from '@google-cloud/local-auth';
 import { google } from 'googleapis';
@@ -14,7 +16,6 @@ import {
   gfNetStatus$
 } from './StatusEnumerate';
 
-const path = require('path');
 /**
  * This class handles syncing with Google Calendar.
  */
@@ -106,7 +107,7 @@ export class GoogleCalendarSync {
           debug(`Added event: ${todo.content}! link: ${event.data.htmlLink}`);
           return;
         }).catch(async (error) => {
-          debug('Error on inserting event:', error);
+          debug(`Error on inserting event: ${error}`);
           await new Promise(resolve => setTimeout(resolve, 100));
         });
     }
@@ -210,11 +211,11 @@ export class GoogleCalendarSync {
     }
   }
 
-/**
-   * Returns a patch object for a completed event in Google Calendar.
-   * @param todo The Todo object to patch.
-   * @returns {calendar_v3.Schema$Event} The patch object.
-   */
+  /**
+     * Returns a patch object for a completed event in Google Calendar.
+     * @param todo The Todo object to patch.
+     * @returns {calendar_v3.Schema$Event} The patch object.
+     */
   static getEventDonePatch(todo: Todo): calendar_v3.Schema$Event {
     if (!todo.eventStatus) {
       todo.eventStatus = 'x';

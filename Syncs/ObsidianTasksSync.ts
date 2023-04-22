@@ -136,7 +136,7 @@ export class ObsidianTasksSync {
         await this.fileMutex.runExclusive(async () => {
           const file = this.app.vault.getAbstractFileByPath(task.path);
           if (!(file instanceof TFile)) {
-            new Notice(`Calendar-Sync: No file found for task ${task.text}. Retrying ...`);
+            new Notice(`sync-calendar: No file found for task ${task.text}. Retrying ...`);
             return;
           }
 
