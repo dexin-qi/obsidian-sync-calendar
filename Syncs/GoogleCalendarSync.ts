@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import type { App, Vault, Notice, FileSystemAdapter } from 'obsidian';
 import { authenticate } from '@google-cloud/local-auth';
 import { google } from 'googleapis';
@@ -14,8 +16,6 @@ import {
   gfNetStatus$
 } from './StatusEnumerate';
 
-// const path = require('path');
-import * as path from 'path';
 /**
  * This class handles syncing with Google Calendar.
  */
