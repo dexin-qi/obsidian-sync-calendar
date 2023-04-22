@@ -46,7 +46,7 @@
 ### 使用此插件
 - 在任何笔记中放置以下代码块：
    ````markdown
-   ```calendar-sync
+   ```sync-calendar
    name: "{numberTodo} todos @ Apr. 21",
    timeMin: "2023-04-21"
    timeMax: "2023-04-22"

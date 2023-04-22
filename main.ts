@@ -88,7 +88,7 @@ export default class SyncCalendarPlugin extends Plugin {
     this.queryInjector = new QueryInjector(this);
     this.queryInjector.setMainSync(this.mainSync);
 
-    this.registerMarkdownCodeBlockProcessor("calendar-sync",
+    this.registerMarkdownCodeBlockProcessor("sync-calendar",
       this.queryInjector.onNewBlock.bind(this.queryInjector)
     );
 
