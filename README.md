@@ -1,6 +1,8 @@
 # Obsidian x Calendar Plugin
 
-An [Obsidian](https://obsidian.md/) plugin to materialize [Google Calendar](https://calendar.google.com/) events in Obsidian notes. [中文](./docs/README.zh-Ch.md)
+[中文](./docs/README.zh-Ch.md)
+
+An [Obsidian](https://obsidian.md/) plugin that synchronizes events from the calendar and manages them like tasks.
 
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/dustinksi/obsidian-sync-calendar/release.yml?style=shield) ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/dustinksi/obsidian-sync-calendar?display_name=tag)

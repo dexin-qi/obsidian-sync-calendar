@@ -1,9 +1,9 @@
 {
   "id": "obsidian-sync-calendar",
   "name": "Sync Calendar",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "minAppVersion": "0.15.0",
-  "description": "This is a plugin for syncing events from a calendar to Obsidian and displaying them as tasks within Obsidian.",
+  "description": "An Obsidian plugin that synchronizes events from the calendar and manages them like tasks.",
   "author": "Dexin Qi",
   "authorUrl": "https://me.dustinksi.cn",
   "fundingUrl": "https://www.buymeacoffee.com/dexin.qi",

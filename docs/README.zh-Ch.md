@@ -1,6 +1,6 @@
 # Obsidian x Calendar
 
-一款 [Obsidian](https://obsidian.md/) 插件，用于在 Obsidian 笔记中实现 [Google 日历](https://calendar.google.com/) 事件的可视化。
+一款 [Obsidian](https://obsidian.md/) 插件，用于在 Obsidian 笔记中实现 [Google 日历](https://calendar.google.com/) 事件的可视化和操作。
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/dustinksi/obsidian-sync-calendar/release.yml?style=shield) ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/dustinksi/obsidian-sync-calendar?display_name=tag)
 
