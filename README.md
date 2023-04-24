@@ -15,7 +15,7 @@ An [Obsidian](https://obsidian.md/) plugin that synchronizes events from the cal
 4. This plugin is still in early alpha and is subject to change at any time!
 
 
-![RELEASE DEMO](https://upic-openaccess.oss-cn-beijing.aliyuncs.com/picgo/README_DEMO.gif)
+![RELEASE DEMO](./docs/README_DEMO.gif)
 
 
 ## Installation & Usage
