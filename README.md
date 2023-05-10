@@ -51,7 +51,7 @@ An [Obsidian](https://obsidian.md/) plugin that synchronizes events from the cal
 - Place a code block like the following in any note:
    ````markdown
    ```sync-calendar
-   name: "{numberTodo} todos @ Apr. 21"
+   name: "{numberTodos} todos @ Apr. 21"
    timeMin: "2023-04-21"
    timeMax: "2023-04-22"
    ```

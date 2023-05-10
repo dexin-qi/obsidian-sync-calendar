@@ -4,5 +4,5 @@
 
 <div class="todo-list-error">
 	<p>Oh no, something went wrong!</p>
-	<code>{error}</code>
+	<pre>{error}</pre>
 </div>

@@ -32,44 +32,12 @@ export function parseQuery(raw: string): Query {
   let obj: any;
 
   try {
-    obj = tryParseAsJson(raw);
+    obj = YAML.parse(raw);
   } catch (e) {
-    try {
-      obj = tryParseAsYaml(raw);
-    } catch (e) {
-      throw new ParsingError("Unable to parse as YAML or JSON");
-    }
+    throw e;
   }
 
   return parseObject(obj);
-}
-
-/**
- * Attempts to parse a raw string as JSON
- * @param raw - the raw string to parse
- * @returns the parsed JSON object
- * @throws ParsingError if the raw string is not valid JSON
- */
-function tryParseAsJson(raw: string): any {
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    throw new ParsingError("Invalid JSON", e);
-  }
-}
-
-/**
- * Attempts to parse a raw string as YAML
- * @param raw - the raw string to parse
- * @returns the parsed YAML object
- * @throws ParsingError if the raw string is not valid YAML
- */
-function tryParseAsYaml(raw: string): any {
-  try {
-    return YAML.parse(raw);
-  } catch (e) {
-    throw new ParsingError("Invalid YAML", e);
-  }
 }
 
 /**
