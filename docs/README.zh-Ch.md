@@ -66,6 +66,13 @@
 | `timeMin` | string | 符合 moment.js 格式的字符串，事件的最小时间（包括 `timeMin`）。 | 基于查询时间向前四周 |
 | `timeMax` | string | 符合 moment.js 格式的字符串，事件的最大时间（不包括 `timeMax`）。 | null |
 
+**Note**: 关于抓取时间：例如有一个 event 其时间跨度为 "2023-04-21 14:00"- "2023-04-21 16:00"，如果在抓取中不希望这个 event 显示，则应该指定 `timeMin: 2023-04-21 16:00`。
+
+**Note**: `timeMin` 和 `timeMax` 会被 [moment.js](https://momentjs.com/docs/#/parsing/) 解析，使用满足 moment.js 的字符串均可被解析， 例如：
+- "2023-04-21"
+- "2023-04-21 16:00"
+- "2023-04-21T08:00:00.000Z"
+
 **Note**: `sort`，`filter`，`group` 将在下一个版本推出，同时非常欢迎您提交 Pull Request。
 ## 命令
 

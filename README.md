@@ -67,6 +67,13 @@ An [Obsidian](https://obsidian.md/) plugin that synchronizes events from the cal
 | `timeMin`      |      string   | A string that conforms to moment.js, the minimum time (including `timeMin`) for events.     |      One week before the current time   |
 | `timeMax` |      string    |  A string that conforms to moment.js, the maximum time (excluding `timeMax`) for events.   | null    |
 
+**Note**: `timeMin` and `timeMax` will be parsed by [moment.js](https://momentjs.com/docs/#/parsing/). Ideally, Any string that satisfies moment.js can be parsed, for example:
+- "2023-04-21" 
+- "2023-04-21 16:00"
+- "2023-04-21T08:00:00.000Z" 
+
+**Note**: About fetching interval: For example, if there is an event whose time span is "2023-04-21 14:00" - "2023-04-21 16:00", if you do not want this event to be displayed during crawling, you should specify `timeMin: "2023-04-21 16:00"`. 
+
 **Note**: `sort`, `filter`，`group` are features which will be released in next version. Welcome to contribute!
 
 ## Command
