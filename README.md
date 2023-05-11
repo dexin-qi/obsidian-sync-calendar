@@ -1,18 +1,19 @@
-# Obsidian x Calendar Plugin
+# Obsidian x Google Calendar Plugin
 
 [中文](./docs/README.zh-Ch.md)
 
-An [Obsidian](https://obsidian.md/) plugin that synchronizes events from the calendar and manages them like tasks.
+An [Obsidian](https://obsidian.md/) plugin that synchronizes [google events](https://calendar.google.com/) from the calendar and manages them like tasks.
 
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/dustinksi/obsidian-sync-calendar/release.yml?style=shield) ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/dustinksi/obsidian-sync-calendar?display_name=tag)
 
 
 **Note**: 
-1. Our task format is borrowed from tasks, but we **do not support recurring tasks** at the moment.
-2. To sync tasks from Obsidian to the calendar, you need to attach a start time element to the task (i.e. 🛫 YYYY-MM-DD), then click the sync icon or call the `Sync with Calendar` command.
-3. Our task synchronization is **centered around calendar events**, which means that after syncing tasks from Obsidian to the calendar, modifications to tasks in Obsidian will not be synced to the calendar. To further modify the schedule, you need to modify it directly in the calendar. The changes made in the calendar will be automatically synced back to Obsidian later.
-4. This plugin is still in early alpha and is subject to change at any time!
+1. Please be aware that **this plugin relies on the [Dataview](https://github.com/blacksmithgu/obsidian-dataview) plugin** to list tasks within a specific date range. **Please make sure you have the Dataview plugin installed before using this plugin**.
+2. Our task format is borrowed from tasks, but we **do not support recurring tasks** at the moment.
+3. To sync tasks from Obsidian to the calendar, you need to attach a start time element to the task (i.e. 🛫 YYYY-MM-DD), then click the sync icon or call the `Sync with Calendar` command.
+4. Our task synchronization is **centered around calendar events**, which means that after syncing tasks from Obsidian to the calendar, modifications to tasks in Obsidian will not be synced to the calendar. To further modify the schedule, you need to modify it directly in the calendar. The changes made in the calendar will be automatically synced back to Obsidian later.
+5. This plugin is still in early alpha and is subject to change at any time!
 
 
 ![RELEASE DEMO](./docs/README_DEMO.gif)
