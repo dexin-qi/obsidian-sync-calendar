@@ -12,11 +12,6 @@ import { setDebugLogging, debug } from 'lib/DebugLog';
 // Remember to rename these classes and interfaces!
 
 interface SyncCalendarPluginSettings {
-  proxyEnabled: boolean;
-  proxyHost: string;
-  proxyPort: number;
-  proxyProtocol: string;
-
   fetchWeeksAgo: number;
   fetchMaximumEvents: number;
 
@@ -27,11 +22,6 @@ interface SyncCalendarPluginSettings {
 }
 
 const DEFAULT_SETTINGS: SyncCalendarPluginSettings = {
-  proxyEnabled: false,
-  proxyHost: '127.0.0.1',
-  proxyPort: 20171,
-  proxyProtocol: 'http',
-
   fetchWeeksAgo: 4,
   fetchMaximumEvents: 2000,
 
@@ -63,18 +53,6 @@ export default class SyncCalendarPlugin extends Plugin {
     setDebugLogging(this.settings.enableLogging);
 
     this.addSettingTab(new SyncCalendarPluginSettingTab(this.app, this));
-
-    if (this.settings.proxyEnabled) {
-      axios.defaults.proxy = {
-        host: this.settings.proxyHost,
-        port: this.settings.proxyPort,
-        protocol: this.settings.proxyProtocol,
-      };
-      debug(`Proxy: ${axios.defaults.proxy.protocol}://${axios.defaults.proxy.host}:${axios.defaults.proxy.port}`);
-    } else {
-      axios.defaults.proxy = false;
-      debug("Proxy Not Enabled!");
-    }
 
     // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
     this.netStatusItem = this.addStatusBarItem();
@@ -131,9 +109,6 @@ export default class SyncCalendarPlugin extends Plugin {
       case NetworkStatus.HEALTH:
         this.netStatusItem.setText("Net: 🟢");
         break;
-      case NetworkStatus.PROXY_ERROR:
-        this.netStatusItem.setText("Net: 🟠");
-        break;
       case NetworkStatus.CONNECTION_ERROR:
         this.netStatusItem.setText("Net: 🔴");
         break;
@@ -176,10 +151,6 @@ export default class SyncCalendarPlugin extends Plugin {
 
 class SyncCalendarPluginSettingTab extends PluginSettingTab {
   plugin: SyncCalendarPlugin;
-  proxyEnabledCheckbox: HTMLInputElement;
-  protocolSelect: HTMLSelectElement;
-  hostInput: HTMLInputElement;
-  portInput: HTMLInputElement;
 
   constructor(app: App, plugin: SyncCalendarPlugin) {
     super(app, plugin);
@@ -197,84 +168,13 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
     );
 
     this.createHeader(
-      "Proxy Settings",
-      "The proxy settings to use when syncing with calendar. \u26A0\ufe0fYou will need to RESTART Obsidian after setting this! \u26A0\ufe0f"
-    );
-
-    // Proxy enabled checkbox
-    this.proxyEnabledCheckbox = new Setting(containerEl)
-      .setName("Enable Proxy")
-      // .setDesc(desc)
-      .addToggle(toggle =>
-        toggle.setValue(this.plugin.settings.proxyEnabled)
-          .onChange(async (value) => {
-            this.plugin.settings.proxyEnabled = value;
-            this.toggleProxySettings(value);
-            await this.plugin.saveSettings();
-          })
-      )
-      .controlEl.querySelector("input");
-
-    // Protocol type selector
-    this.protocolSelect = new Setting(containerEl)
-      .setName("Protocol Type")
-      .addDropdown(dropdown =>
-        dropdown
-          .addOption("http", "HTTP")
-          .addOption("https", "HTTPS")
-          .addOption("socks5", "SOCKS5")
-          .setValue(this.plugin.settings.proxyProtocol)
-          .onChange(async (value) => {
-            this.plugin.settings.proxyProtocol = value;
-            await this.plugin.saveSettings();
-          })
-      )
-      .controlEl.querySelector("select");
-
-    // Proxy server address input
-    this.hostInput = new Setting(containerEl)
-      .setName("Server Address")
-      .setDesc("Enter the IP address or hostname of the proxy server")
-      .addText(text =>
-        text
-          .setValue(this.plugin.settings.proxyHost)
-          .onChange(async (value) => {
-            this.plugin.settings.proxyHost = value;
-            await this.plugin.saveSettings();
-          })
-      )
-      .controlEl.querySelector("input");
-
-    // Proxy server port input
-    this.portInput = new Setting(containerEl)
-      .setName("Server Port")
-      .setDesc("Enter the port number used by the proxy server")
-      .addText(text =>
-        text
-          .setValue(this.plugin.settings.proxyPort.toString())
-          .onChange(async (value) => {
-            const port = parseInt(value);
-            if (!isNaN(port)) {
-              this.plugin.settings.proxyPort = port;
-              await this.plugin.saveSettings();
-            }
-          })
-      )
-      .controlEl.querySelector("input");
-
-    // Hide or show the protocol type selector, address input, and port input based on whether the proxy is enabled
-    this.toggleProxySettings(this.plugin.settings.proxyEnabled);
-
-
-    this.createHeader(
       "Fetch Settings",
-      "Settings to manage calendar fetch events."
+      "Options on events fetching."
     );
-
 
     new Setting(containerEl)
       .setName("Weeks Ago")
-      .setDesc("Enter how many weeks ago did you concerned.")
+      .setDesc("Enter weeks from the earliest task to now for this plugin to consider.")
       .addText(text =>
         text
           .setValue(this.plugin.settings.fetchWeeksAgo.toString())
@@ -304,17 +204,15 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
 
     this.createHeader(
       "Render Settings",
-      "Settings to manage render events."
+      "Options on events rendering."
     );
 
     new Setting(containerEl)
       .setName("Render Date")
-      // .setDesc(desc)
       .addToggle(toggle =>
         toggle.setValue(this.plugin.settings.renderDate)
           .onChange(async (value) => {
             this.plugin.settings.renderDate = value;
-            this.toggleProxySettings(value);
             await this.plugin.saveSettings();
           })
       )
@@ -327,7 +225,6 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
         toggle.setValue(this.plugin.settings.renderTags)
           .onChange(async (value) => {
             this.plugin.settings.renderTags = value;
-            this.toggleProxySettings(value);
             await this.plugin.saveSettings();
           })
       )
@@ -338,7 +235,7 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       "Some debug settings"
     );
 
-    // Proxy enabled checkbox
+    // Debug logging enabled checkbox
     new Setting(containerEl)
       .setName("Enable Logging")
       .addToggle(toggle =>
@@ -350,12 +247,6 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
           })
       )
       .controlEl.querySelector("input");
-  }
-
-  toggleProxySettings(enabled: boolean) {
-    this.protocolSelect.disabled = !enabled;
-    this.hostInput.disabled = !enabled;
-    this.portInput.disabled = !enabled;
   }
 
   private createHeader(header_title: string, header_desc: string | null = null) {

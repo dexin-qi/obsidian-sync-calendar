@@ -6,11 +6,12 @@
 
 
 **注意**：
-1. 我们的任务格式借鉴了 tasks，但我们**目前不支持重复任务**。
-2. 要将任务从 Obsidian 同步到日历中，您需要将开始时间元素附加到任务上（即 🛫 YYYY-MM-DD），然后单击同步图标或调用“Sync with Calendar”命令。
-3. 我们的任务同步是**以日历事件为中心**的，这意味着在将任务从 Obsidian 同步到日历后，在 Obsidian 中对任务进行的修改不会同步到日历中。要进一步修改日程安排，您需要直接在日历中进行修改。稍后，对日历中进行的更改将自动同步回 Obsidian。
-4. 此插件仍处于早期 alpha 版本，随时可能更改！
-5. 我很清楚 google calendar 在国内的使用体验不佳，但是 Microsoft 提供的接口真的一言难尽...
+1. 本插件依赖 [Dataview](https://github.com/blacksmithgu/obsidian-dataview) 插件来列举指定日期范围内的任务。在使用本插件前，**请确保您已安装 Dataview 插件**。
+2. 我们的任务格式借鉴了 tasks，但我们**目前不支持重复任务**。
+3. 要将任务从 Obsidian 同步到日历中，您需要将开始时间元素附加到任务上（即 🛫 YYYY-MM-DD），然后单击同步图标或调用“Sync with Calendar”命令。
+4. 我们的任务同步是**以日历事件为中心**的，这意味着在将任务从 Obsidian 同步到日历后，在 Obsidian 中对任务进行的修改不会同步到日历中。要进一步修改日程安排，您需要直接在日历中进行修改。稍后，对日历中进行的更改将自动同步回 Obsidian。
+5. 此插件仍处于早期 alpha 版本，随时可能更改！
+6. 我很清楚 google calendar 在国内的使用体验不佳，但是 Microsoft 提供的接口真的一言难尽...
 
 ![RELEASE DEMO](https://upic-openaccess.oss-cn-beijing.aliyuncs.com/picgo/README_DEMO.gif)
 
