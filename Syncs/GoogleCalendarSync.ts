@@ -26,6 +26,8 @@ export class GoogleCalendarSync {
   private TOKEN_PATH = ""
   private CREDENTIALS_PATH = ""
 
+  private isTokenValid = true;
+
   constructor(app: App) {
     this.vault = app.vault
 
@@ -58,6 +60,9 @@ export class GoogleCalendarSync {
           orderBy: 'startTime',
         })
         .catch(err => {
+          if (err.message == 'invalid_grant') {
+            this.isTokenValid = true;
+          }
           // Set the network status to CONNECTION_ERROR and the sync status to FAILED_WARNING
           gfNetStatus$.next(NetworkStatus.CONNECTION_ERROR);
           gfSyncStatus$.next(SyncStatus.FAILED_WARNING);
@@ -265,10 +270,14 @@ export class GoogleCalendarSync {
    */
   async isReady(): Promise<boolean> {
     const client = await this.loadSavedCredentialsIfExist();
-    if (client) {
-      return true;
+    if (!client) {
+      return false;
     }
-    return false;
+    if (!this.isTokenValid) {
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -309,9 +318,12 @@ export class GoogleCalendarSync {
    * @returns {Promise<OAuth2Client>} The authorized client.
    */
   public async authorize(): Promise<OAuth2Client> {
-    let client: OAuth2Client = await this.loadSavedCredentialsIfExist() as OAuth2Client;
-    if (client) {
-      return client;
+    let client: OAuth2Client;
+    if (this.isTokenValid) {
+      client = await this.loadSavedCredentialsIfExist() as OAuth2Client;
+      if (client) {
+        return client;
+      }
     }
 
     const fs_adapter = this.vault.adapter as FileSystemAdapter;
@@ -324,6 +336,7 @@ export class GoogleCalendarSync {
     if (client.credentials) {
       await this.saveCredentials(client);
     }
+    this.isTokenValid = true;
     return client;
   }
 

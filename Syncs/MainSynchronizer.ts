@@ -92,8 +92,6 @@ export class MainSynchronizer {
     startMoment: moment.Moment,
     maxResults: number = 200): Promise<Todo[]> {
 
-    debug(`pull Todos: startMoment=${startMoment}`);
-
     // 1. list events in Calendar
     const clEvents = await this.calendarSync.listEvents(startMoment, maxResults);
 
