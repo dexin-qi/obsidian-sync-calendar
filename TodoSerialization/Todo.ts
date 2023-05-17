@@ -13,6 +13,7 @@ export class Todo {
   public startDateTime: null | string | undefined;
   public scheduledDateTime?: null | string | undefined;
   public dueDateTime?: null | string | undefined;
+  public doneDateTime?: null | string | undefined;
 
   public children?: Todo[] | undefined;
 
@@ -33,6 +34,7 @@ export class Todo {
     startDateTime,
     scheduledDateTime,
     dueDateTime,
+    doneDateTime,
     children,
     path,
     blockId,
@@ -48,6 +50,7 @@ export class Todo {
     startDateTime: null | string | undefined;
     scheduledDateTime?: null | string | undefined;
     dueDateTime?: null | string | undefined;
+    doneDateTime?: null | string | undefined;
     children?: Todo[] | undefined;
     path?: string | undefined;
     blockId?: null | string | undefined;
@@ -64,6 +67,7 @@ export class Todo {
     this.startDateTime = startDateTime;
     this.scheduledDateTime = scheduledDateTime;
     this.dueDateTime = dueDateTime;
+    this.doneDateTime = doneDateTime;
 
     this.children = children;
 
@@ -87,6 +91,7 @@ export class Todo {
     if (todo.startDateTime) { this.startDateTime = todo.startDateTime; }
     if (todo.scheduledDateTime) { this.scheduledDateTime = todo.scheduledDateTime; }
     if (todo.dueDateTime) { this.dueDateTime = todo.dueDateTime; }
+    if (todo.doneDateTime) { this.doneDateTime = todo.doneDateTime; }
     if (todo.tags) { this.tags = todo.tags; }
     if (todo.children) { this.children = todo.children; }
     if (todo.path) { this.path = todo.path; }
@@ -107,6 +112,7 @@ export class Todo {
       blockId: this.blockId,
       priority: this.priority,
       tags: this.tags,
+      doneDateTime: this.doneDateTime,
     });
   }
 
@@ -138,8 +144,8 @@ export class Todo {
 
     let isValidEvent = false;
     if (isValidInterval) {
-      todoEvent.start.dateTime = todo.startDateTime;
-      todoEvent.end.dateTime = todo.dueDateTime;
+      todoEvent.start!.dateTime = todo.startDateTime;
+      todoEvent.end!.dateTime = todo.dueDateTime;
       isValidEvent = true;
     } else {
       const regDate = /(\d{4}-\d{2}-\d{2})/u;
@@ -147,12 +153,12 @@ export class Todo {
         let startDateMatch = todo.startDateTime.match(regDate);
         let endDateMatch = todo.dueDateTime?.match(regDate);
         if (startDateMatch) {
-          todoEvent.start.date = startDateMatch[1];
-          todoEvent.end.date = endDateMatch ? endDateMatch[1] : startDateMatch[1];
+          todoEvent.start!.date = startDateMatch[1];
+          todoEvent.end!.date = endDateMatch ? endDateMatch[1] : startDateMatch[1];
           isValidEvent = true;
         } else if (endDateMatch) {
-          todoEvent.start.date = endDateMatch[1];
-          todoEvent.end.date = endDateMatch[1];
+          todoEvent.start!.date = endDateMatch[1];
+          todoEvent.end!.date = endDateMatch[1];
         }
       }
     }
@@ -179,6 +185,7 @@ export class Todo {
     let eventStatus = "";
     let blockId = undefined;
     let priority = undefined;
+    let doneDateTime= undefined;
     let startDateTime: string;
     let dueDateTime: string;
     let tags: string[] = [];
@@ -197,6 +204,9 @@ export class Todo {
       } catch (e) { debug(`JSON parse error on ${eventMeta.description}: ${e}`); }
       try {
         tags = JSON.parse(eventMeta.description).tags;
+      } catch (e) { debug(`JSON parse error on ${eventMeta.description}: ${e}`); }
+      try {
+        doneDateTime = JSON.parse(eventMeta.description).doneDateTime;
       } catch (e) { debug(`JSON parse error on ${eventMeta.description}: ${e}`); }
     }
 
@@ -226,6 +236,7 @@ export class Todo {
       blockId,
       startDateTime,
       dueDateTime,
+      doneDateTime,
       calUId,
       eventId,
       eventStatus,

@@ -24,6 +24,7 @@ export interface DefaultTodoSerializerSymbols {
     startDateTimeRegex: RegExp;
     dueDateRegex: RegExp;
     dueDateTimeRegex: RegExp;
+    doneDateRegex: RegExp;
     recurrenceRegex: RegExp;
   };
 }
@@ -50,6 +51,7 @@ export const DEFAULT_SYMBOLS: DefaultTodoSerializerSymbols = {
     scheduledDateTimeRegex: /[⏳⌛] *(\d{4}-\d{2}-\d{2}@\d+:\d+)$/u,
     dueDateRegex: /[📅📆🗓] *(\d{4}-\d{2}-\d{2})$/u,
     dueDateTimeRegex: /[📅📆🗓] *(\d{4}-\d{2}-\d{2}@\d+:\d+)$/u,
+    doneDateRegex: /✅ *(\d{4}-\d{2}-\d{2})$/u,
     recurrenceRegex: /🔁 ?([a-zA-Z0-9, !]+)$/iu,
   },
 } as const;
@@ -164,6 +166,10 @@ export class DefaultTodoSerializer implements TodoSerializer {
       }
     }
 
+    if (todo.doneDateTime) {
+      components.push('✅ ' + todo.doneDateTime);
+    }
+
     if (todo.blockId) {
       components.push(`^${todo.blockId}`);
     }
@@ -187,6 +193,7 @@ export class DefaultTodoSerializer implements TodoSerializer {
     let matched: boolean;
     let priority: null | string = null;
     let blockId: null | string = null;
+    let doneDateTime: null | string = null;
     let startDateTime: null | string = null;
     let scheduledDateTime: null | string = null;
     let dueDateTime: null | string = null;
@@ -241,6 +248,13 @@ export class DefaultTodoSerializer implements TodoSerializer {
       if (dueDateTimeMatch !== null) {
         dueDateTime = window.moment(dueDateTimeMatch[1], TodoRegularExpressions.dateTimeFormat).format('YYYY-MM-DD[T]HH:mm:ssZ');
         line = line.replace(TodoFormatRegularExpressions.dueDateTimeRegex, '').trim();
+        matched = true;
+      }
+
+      const doneDateMatch = line.match(TodoFormatRegularExpressions.doneDateRegex);
+      if (doneDateMatch !== null) {
+        doneDateTime = window.moment(doneDateMatch[1], TodoRegularExpressions.dateFormat).format('YYYY-MM-DD');
+        line = line.replace(TodoFormatRegularExpressions.doneDateRegex, '').trim();
         matched = true;
       }
 
@@ -309,6 +323,7 @@ export class DefaultTodoSerializer implements TodoSerializer {
       startDateTime,
       scheduledDateTime,
       dueDateTime,
+      doneDateTime,
     };
   }
 }
