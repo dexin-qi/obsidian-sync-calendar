@@ -32,10 +32,17 @@
 			: "{numberTodos} todos in calendar";
 
 	$: {
-		if (autoRefreshIntervalId == null) {
-			autoRefreshIntervalId = window.setInterval(async () => {
-				await fetchEventLists();
-			}, 10000);
+		if (!query.refreshInterval || query.refreshInterval == -1) {
+			if (autoRefreshIntervalId !== null) {
+				clearInterval(autoRefreshIntervalId);
+			}
+		} else {
+			// First, if query.refreshInterval is set.. we always use that value.
+			if (autoRefreshIntervalId === null) {
+				autoRefreshIntervalId = window.setInterval(async () => {
+					await fetchEventLists();
+				}, query.refreshInterval * 1000);
+			}
 		}
 	}
 

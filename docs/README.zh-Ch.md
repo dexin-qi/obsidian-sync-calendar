@@ -66,6 +66,7 @@
 | `name` | string | 查询的标题。您可以使用 `{numberTodos}` 模板，该模板将被查询返回的待办事项数量替换。 | "{numberTodos} todos in calendar" |
 | `timeMin` | string | 符合 moment.js 格式的字符串，事件的最小时间（包括 `timeMin`）。 | 基于查询时间向前四周 |
 | `timeMax` | string | 符合 moment.js 格式的字符串，事件的最大时间（不包括 `timeMax`）。 | null |
+| `refreshInterval` | number | 自动刷新的时间间隔(以秒为单位)，设置为 `-1` 时可以禁用自动刷新。  | 10 | 
 
 **Note**: 关于抓取时间：例如有一个 event 其时间跨度为 "2023-04-21 14:00"- "2023-04-21 16:00"，如果在抓取中不希望这个 event 显示，则应该指定 `timeMin: 2023-04-21 16:00`。
 

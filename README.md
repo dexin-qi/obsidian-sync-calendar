@@ -67,6 +67,7 @@ An [Obsidian](https://obsidian.md/) plugin that synchronizes [google events](htt
 | `name`        | string        | The title for the query. You can use the `{numberTodos}` template which will be replaced by the number of todos returned by the query.        | {numberTodos} todos in calendar         |
 | `timeMin`      |      string   | A string that conforms to moment.js, the minimum time (including `timeMin`) for events.     |      One week before the current time   |
 | `timeMax` |      string    |  A string that conforms to moment.js, the maximum time (excluding `timeMax`) for events.   | null    |
+| `refreshInterval` | number | The auto-refresh interval in seconds. Set to `-1` to disable auto-refresh.  | 10 | 
 
 **Note**: `timeMin` and `timeMax` will be parsed by [moment.js](https://momentjs.com/docs/#/parsing/). Ideally, Any string that satisfies moment.js can be parsed, for example:
 - "2023-04-21" 
