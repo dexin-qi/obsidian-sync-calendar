@@ -1,12 +1,10 @@
-import axios from 'axios';
-
-import { App, type PluginManifest, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, type PluginManifest, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 import { SyncStatus, NetworkStatus } from 'Syncs/StatusEnumerate';
 import { gfSyncStatus$, gfNetStatus$ } from 'Syncs/StatusEnumerate';
 import { MainSynchronizer } from "Syncs/MainSynchronizer";
 import QueryInjector from 'Injector/QueryInjector';
-import { setDebugLogging, debug } from 'lib/DebugLog';
+import { setDebugLogging } from 'lib/DebugLog';
 
 
 // Remember to rename these classes and interfaces!
@@ -73,7 +71,7 @@ export default class SyncCalendarPlugin extends Plugin {
     // Add Ribbons
     const ribbonIconEl = this.addRibbonIcon(
       'sync',
-      'Sync With Calendar',
+      'Sync Google Calendar',
       async (evt: MouseEvent) => {
         const keyMoment = window.moment().startOf('day');
         const Ago = window.moment.duration(this.settings.fetchWeeksAgo, 'week');
@@ -87,8 +85,8 @@ export default class SyncCalendarPlugin extends Plugin {
 
     // Add Commands
     this.addCommand({
-      id: 'sync-with-calendar',
-      name: 'Sync With Calendar',
+      id: 'sync-google-calendar',
+      name: 'Sync Google Calendar',
       callback: async () => {
         const keyMoment = window.moment().startOf('day');
         const Ago = window.moment.duration(this.settings.fetchWeeksAgo, 'week');
@@ -162,18 +160,10 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    this.createHeader(
-      "SyncCalendar",
-      "Sync Google calendar 📆 events with your Obsidian notes."
-    );
-
-    this.createHeader(
-      "Fetch Settings",
-      "Options on events fetching."
-    );
+    this.createHeader("Fetch");
 
     new Setting(containerEl)
-      .setName("Weeks Ago")
+      .setName("Weeks ago")
       .setDesc("Enter weeks from the earliest task to now for this plugin to consider.")
       .addText(text =>
         text
@@ -188,7 +178,7 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       ).controlEl.querySelector("input");
 
     new Setting(containerEl)
-      .setName("Maximum Events")
+      .setName("Maximum events")
       .setDesc("Enter the maximum number of events in the fetching window")
       .addText(text =>
         text
@@ -202,13 +192,11 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
           })
       ).controlEl.querySelector("input");
 
-    this.createHeader(
-      "Render Settings",
-      "Options on events rendering."
-    );
+    this.createHeader("Render");
 
     new Setting(containerEl)
-      .setName("Render Date")
+      .setName("Render date")
+      .setDesc("Whether date should be rendered with google events.")
       .addToggle(toggle =>
         toggle.setValue(this.plugin.settings.renderDate)
           .onChange(async (value) => {
@@ -219,8 +207,8 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       .controlEl.querySelector("input");
 
     new Setting(containerEl)
-      .setName("Render Tags")
-      // .setDesc(desc)
+      .setName("Render tags")
+      .setDesc("Whether tags should be rendered with google events.")
       .addToggle(toggle =>
         toggle.setValue(this.plugin.settings.renderTags)
           .onChange(async (value) => {
@@ -230,14 +218,12 @@ class SyncCalendarPluginSettingTab extends PluginSettingTab {
       )
       .controlEl.querySelector("input");
 
-    this.createHeader(
-      "Debug Settings",
-      "Some debug settings"
-    );
+    this.createHeader("Debug");
 
     // Debug logging enabled checkbox
     new Setting(containerEl)
-      .setName("Enable Logging")
+      .setName("Enable logging")
+      .setDesc("Enable debug logging might help to locate synchronization issues.")
       .addToggle(toggle =>
         toggle.setValue(this.plugin.settings.enableLogging)
           .onChange(async (value) => {

@@ -1,9 +1,9 @@
 {
-  "id": "sync-calendar",
-  "name": "Sync Calendar",
-  "version": "1.1.5",
+  "id": "sync-google-calendar",
+  "name": "Sync Google Calendar",
+  "version": "1.1.6",
   "minAppVersion": "0.15.0",
-  "description": "An Obsidian plugin that synchronizes google events from the calendar and manages them like tasks.",
+  "description": "Synchronize events from Google Calendar and manage them like tasks.",
   "author": "Dexin Qi",
   "authorUrl": "https://me.dustinksi.cn",
   "fundingUrl": "https://www.buymeacoffee.com/dexin.qi",

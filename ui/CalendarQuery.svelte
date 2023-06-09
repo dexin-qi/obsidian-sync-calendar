@@ -111,9 +111,7 @@
 			setTimeout(() => {
 				reject(
 					new Error(
-						"Timeout occurred when fetching from Google Calendar!\n \
-            Check your connection and proxy settings, \
-            then restart Obsidian."
+						"Timeout occurred when fetching from Google Calendar!\nCheck your connection and proxy settings, then restart Obsidian."
 					)
 				);
 			}, 4000);
