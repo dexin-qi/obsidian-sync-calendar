@@ -32,7 +32,7 @@
 			: "{numberTodos} todos in calendar";
 
 	$: {
-		if (!query.refreshInterval || query.refreshInterval == -1) {
+		if (query === undefined || !query.refreshInterval || query.refreshInterval == -1) {
 			if (autoRefreshIntervalId !== null) {
 				clearInterval(autoRefreshIntervalId);
 			}

@@ -307,6 +307,22 @@ export class DefaultTodoSerializer implements TodoSerializer {
     //   });
     // }
 
+    // Bare trailing date fallback: if no start marker (🛫) was present, treat a
+    // plain date at the very end of the line as the start date. Only the final
+    // YYYY-MM-DD (optionally @HH:MM) token is consumed; anything before it stays
+    // part of the content, so "Read chapter 2 2026-07-27" keeps the "2".
+    if (startDateTime === null) {
+      const bareDateTimeMatch = line.match(/(\d{4}-\d{2}-\d{2}@\d{1,2}:\d{2})$/u);
+      const bareDateMatch = line.match(/(\d{4}-\d{2}-\d{2})$/u);
+      if (bareDateTimeMatch !== null) {
+        startDateTime = window.moment(bareDateTimeMatch[1], TodoRegularExpressions.dateTimeFormat).format('YYYY-MM-DD[T]HH:mm:ssZ');
+        line = line.replace(/(\d{4}-\d{2}-\d{2}@\d{1,2}:\d{2})$/u, '').trim();
+      } else if (bareDateMatch !== null) {
+        startDateTime = window.moment(bareDateMatch[1], TodoRegularExpressions.dateFormat).format('YYYY-MM-DD');
+        line = line.replace(/(\d{4}-\d{2}-\d{2})$/u, '').trim();
+      }
+    }
+
     let tags = trailingTags.match(TodoRegularExpressions.hashTags)?.map((tag) => tag.trim()) ?? [];
 
     // Add back any trailing tags to the description. We removed them so we can parse the rest of the

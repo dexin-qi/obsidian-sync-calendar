@@ -104,19 +104,36 @@ export class ObsidianTasksSync {
    * @param triggeredBy - Whether the fetch was triggered automatically or manually.
    * @returns An array of todos.
    */
-  public listTasks(startMoment: moment.Moment, triggeredBy: 'auto' | 'mannual' = 'auto'): Todo[] {
+  public async listTasks(startMoment: moment.Moment, triggeredBy: 'auto' | 'mannual' = 'auto'): Promise<Todo[]> {
     let obTodos: Todo[] = [];
 
     const queriedTasks = this.dataviewAPI!.pages().file.tasks
       .where((task: STask) => {
-        let taskMatch = task.text.match(/🛫+ (\d{4}-\d{2}-\d{2})/u);
-        if (!taskMatch) { return false; }
-        return !window.moment(taskMatch[1]).isBefore(startMoment.startOf('day'));
+        // A task is eligible for syncing if it carries a start date either via the
+        // 🛫 marker OR as a bare trailing date (YYYY-MM-DD, optionally @HH:MM) at
+        // the end of the line. The bare-date form lets you jot a quick dated task
+        // without needing the emoji.
+        const text = task.text.replace(/\s*\^[0-9a-zA-Z]+\s*$/u, "").trim();
+        let dateStr: string | null = null;
+        const flagMatch = text.match(/🛫+ (\d{4}-\d{2}-\d{2})/u);
+        if (flagMatch) {
+          dateStr = flagMatch[1];
+        } else {
+          const bareMatch = text.match(/(\d{4}-\d{2}-\d{2})(?:@\d{1,2}:\d{2})?$/u);
+          if (bareMatch) { dateStr = bareMatch[1]; }
+        }
+        if (!dateStr) { return false; }
+        return !window.moment(dateStr).isBefore(startMoment.startOf('day'));
       });
 
-    queriedTasks.values.forEach(async (task: STask) => {
+    // Iterate with an awaited for-of loop (NOT forEach with an async callback),
+    // so the file writes / blockId stamping actually complete before we return
+    // the fully-populated list. The previous forEach returned obTodos before its
+    // async callbacks finished, so a freshly-added task was often missed.
+    for (const task of queriedTasks.values as STask[]) {
       //  对抓取到的 tasks，没有指定 blockId 需要创建 hashed blockId。
       let todo_details: TodoDetails | null = null;
+      let effectiveBlockId: string | undefined = task.blockId;
       if (task.blockId && task.blockId.length > 0) {
         todo_details = this.deserializer.deserialize(task.text);
       } else {
@@ -124,7 +141,7 @@ export class ObsidianTasksSync {
           const cursorPosition = this.app.workspace.activeEditor?.editor?.getCursor();
           if (cursorPosition?.line === task.position.start.line) {
             debug("task is on editing, skip it!");
-            return;
+            continue;
           }
         }
 
@@ -140,7 +157,7 @@ export class ObsidianTasksSync {
             return;
           }
 
-          const fileContent = await self.app.vault.read(file);
+          const fileContent = await this.app.vault.read(file);
           const fileLines = fileContent.split('\n');
 
           const updatedFileLines = [
@@ -149,22 +166,24 @@ export class ObsidianTasksSync {
             ...fileLines.slice(task.position.start.line + 1),
           ];
 
-          await self.app.vault.modify(file, updatedFileLines.join('\n'));
+          await this.app.vault.modify(file, updatedFileLines.join('\n'));
         });
+        effectiveBlockId = shorternTaskHash;
         todo_details = this.deserializer.deserialize(`${task.text} ^${shorternTaskHash}`);
       }
 
       const todo = new Todo({
         ...todo_details,
+        blockId: effectiveBlockId,
         path: task.path,
         eventStatus: task.status
       });
 
       if (window.moment(todo.startDateTime!).isBefore(startMoment)) {
-        return;
+        continue;
       }
       obTodos.push(todo);
-    });
+    }
 
     return obTodos;
   }
@@ -192,7 +211,7 @@ export class ObsidianTasksSync {
 
     // Update the file content
     await this.fileMutex.runExclusive(async () => {
-      const fileContent = await self.app.vault.read(file);
+      const fileContent = await this.app.vault.read(file);
       const originFileLines = fileContent.split('\n');
 
       let targetLine: number | undefined = undefined;
@@ -208,7 +227,7 @@ export class ObsidianTasksSync {
       }
 
       const updatedFileLines = updateFunc(originFileLines, targetLine!);
-      self.app.vault.modify(file, updatedFileLines.join('\n'));
+      this.app.vault.modify(file, updatedFileLines.join('\n'));
     });
   }
 

@@ -43,23 +43,30 @@ export class GoogleCalendarSync {
    * @param maxResults The maximum number of results to retrieve.
    * @returns A Promise that resolves to an array of Todo objects.
    */
-  async listEvents(startMoment: moment.Moment, maxResults: number = 200): Promise<Todo[]> {
+  async listEvents(startMoment: moment.Moment, maxResults: number = 200, endMoment?: moment.Moment): Promise<Todo[]> {
     let auth = await this.authorize();
     const calendar = google.calendar({ version: 'v3', auth });
 
     // Set the sync and network status to DOWNLOAD
     gfSyncStatus$.next(SyncStatus.DOWNLOAD);
 
+    // Build the list params. When an endMoment is provided, bound the query
+    // server-side with timeMax (exclusive) so we only fetch the window we need.
+    const listParams: calendar_v3.Params$Resource$Events$List = {
+      calendarId: 'primary',
+      timeMin: startMoment.toISOString(),
+      maxResults: maxResults,
+      singleEvents: true,
+      orderBy: 'startTime',
+    };
+    if (endMoment) {
+      listParams.timeMax = endMoment.toISOString();
+    }
+
     // Retrieve the events from Google Calendar
     const eventsListQueryResult =
       await calendar.events
-        .list({
-          calendarId: 'primary',
-          timeMin: startMoment.toISOString(),
-          maxResults: maxResults,
-          singleEvents: true,
-          orderBy: 'startTime',
-        })
+        .list(listParams)
         .catch(err => {
           if (err.message == 'invalid_grant') {
             this.isTokenValid = false;
@@ -101,11 +108,23 @@ export class GoogleCalendarSync {
     gfSyncStatus$.next(SyncStatus.UPLOAD);
     while (retryTimes < 20 && !isInsertSuccess) {
       ++retryTimes;
+
+      // Build the event resource first. If the todo cannot be converted into a
+      // valid event (e.g. missing/invalid dates), bail out of the retry loop
+      // immediately instead of retrying an impossible insert 20 times.
+      let eventResource: calendar_v3.Schema$Event;
+      try {
+        eventResource = Todo.toGoogleEvent(todo);
+      } catch (buildErr) {
+        debug(`toGoogleEvent failed for ${todo.content}: ${buildErr}`);
+        break;
+      }
+
       await calendar.events
         .insert({
           auth: auth,
           calendarId: 'primary',
-          resource: Todo.toGoogleEvent(todo)
+          resource: eventResource
         } as calendar_v3.Params$Resource$Events$Insert
         )
         .then((event) => {

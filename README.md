@@ -19,6 +19,49 @@ An [Obsidian](https://obsidian.md/) plugin that synchronizes [google events](htt
 ![RELEASE DEMO](./docs/README_DEMO.gif)
 
 
+## Enhancements in this fork
+
+This fork adds bug fixes and new features on top of the original plugin:
+
+**Bug fixes**
+- Rendering a `sync-calendar` block with an empty/undefined query no longer crashes
+  (guards `query.refreshInterval`).
+- Events created directly in Google Calendar (plain-text descriptions) no longer flood
+  the console with `JSON.parse` errors — the description is parsed once, only when it
+  looks like JSON.
+- Completing a calendar-sourced event (one with no local task line) no longer throws
+  "invalid path or blockId"; note write-back is skipped and the Google patch is guarded.
+- `listTasks` is now `async`/awaited (was fire-and-forget), so a freshly added task is
+  pushed on the first sync instead of needing a second one.
+- All-day tasks push correctly: the event's `end.date` is made exclusive (start + 1 day),
+  fixing a `400 Bad Request` for same-day all-day events.
+- `listEvents` accepts an optional `timeMax` so week fetches are bounded server-side.
+- Fixed several `self.app` references that should have been `this.app`.
+
+**New: flexible task dates**
+- Bare trailing date works anywhere: `- [ ] Read chapter 2 2026-07-27` (only the final
+  `YYYY-MM-DD`, optionally `@HH:MM`, is treated as the start date).
+- Inside a weekly-note managed block, an undated task `- [ ] some text` is given today's
+  date automatically on sync.
+
+**New: weekly notes + one-button sync**
+- A single "Sync Google Calendar" ribbon/command now does everything: fills undated
+  in-block tasks with today's date, pushes eligible tasks up, then materializes this
+  week's events into a weekly note.
+- Weekly notes are auto-created as `YYYY-MM-W<n>-<startday>-<endday>-<Month>.md`
+  (weeks Sunday→Saturday, clipped to the month). Events are written into a managed block:
+
+  ```markdown
+  <!-- gcal:begin week=2026-07-W5 range=2026-07-26..2026-07-31 -->
+  - [ ] Meeting 🛫 2026-07-26@15:00 📅 2026-07-26@16:00 ^blockId
+  <!-- gcal:end -->
+  ```
+
+  Only content between the markers is managed by the plugin; the rest of the note is
+  yours. The refresh is idempotent and preserves local in-block tasks that have not yet
+  round-tripped to Google (no data loss).
+
+
 ## Installation & Usage
 
 ### First of All

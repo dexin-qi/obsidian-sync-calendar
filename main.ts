@@ -1,4 +1,4 @@
-import { App, type PluginManifest, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, type PluginManifest, Plugin, PluginSettingTab, Setting, Notice } from 'obsidian';
 
 import { SyncStatus, NetworkStatus } from 'Syncs/StatusEnumerate';
 import { gfSyncStatus$, gfNetStatus$ } from 'Syncs/StatusEnumerate';
@@ -68,36 +68,51 @@ export default class SyncCalendarPlugin extends Plugin {
       this.queryInjector.onNewBlock.bind(this.queryInjector)
     );
 
-    // Add Ribbons
+    // Add Ribbon - a single button that runs the full sync pipeline.
     const ribbonIconEl = this.addRibbonIcon(
       'sync',
       'Sync Google Calendar',
       async (evt: MouseEvent) => {
-        const keyMoment = window.moment().startOf('day');
-        const Ago = window.moment.duration(this.settings.fetchWeeksAgo, 'week');
-        this.mainSync.pushTodosToCalendar(
-          keyMoment.subtract(Ago),
-          this.settings.fetchMaximumEvents,
-          'mannual'
-        );
+        await this.runFullSync();
       });
     ribbonIconEl.addClass('my-plugin-ribbon-class');
 
-    // Add Commands
+    // Add Command - same single full-sync entry point.
     this.addCommand({
       id: 'sync-google-calendar',
       name: 'Sync Google Calendar',
       callback: async () => {
-        const keyMoment = window.moment().startOf('day');
-        const Ago = window.moment.duration(this.settings.fetchWeeksAgo, 'week');
-        this.mainSync.pushTodosToCalendar(
-          keyMoment.subtract(Ago),
-          this.settings.fetchMaximumEvents,
-          'mannual'
-        );
+        await this.runFullSync();
       }
     });
 
+  }
+
+  /**
+   * Single entry point for a full sync, triggered by the sync ribbon/command.
+   * Runs in order:
+   *   1. Push eligible Obsidian tasks up to Google Calendar (this also fills
+   *      undated tasks inside gcal managed blocks with today's date first).
+   *   2. Materialize this week's Google Calendar events back into the weekly note's
+   *      managed block (creating the weekly note if it does not exist).
+   */
+  private async runFullSync(): Promise<void> {
+    const keyMoment = window.moment().startOf('day');
+    const Ago = window.moment.duration(this.settings.fetchWeeksAgo, 'week');
+    try {
+      await this.mainSync.pushTodosToCalendar(
+        keyMoment.clone().subtract(Ago),
+        this.settings.fetchMaximumEvents,
+        'mannual'
+      );
+    } catch (e: any) {
+      new Notice(`sync-calendar: push failed - ${e && e.message ? e.message : e}`);
+    }
+    try {
+      await this.mainSync.syncWeekToNote();
+    } catch (e: any) {
+      new Notice(`sync-calendar: weekly sync failed - ${e && e.message ? e.message : e}`);
+    }
   }
 
   onunload() { }
