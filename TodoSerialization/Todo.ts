@@ -147,16 +147,25 @@ export class Todo {
       isValidEvent = true;
     } else {
       const regDate = /(\d{4}-\d{2}-\d{2})/u;
+      // Google requires an all-day event's end.date to be EXCLUSIVE (strictly
+      // after start.date). A same-day all-day event (end == start) is rejected
+      // with a 400, so bump the end to start + 1 day when it is not after start.
+      const nextDay = (d: string): string =>
+        window.moment(d, 'YYYY-MM-DD').add(1, 'day').format('YYYY-MM-DD');
       if (todo.startDateTime) {
         let startDateMatch = todo.startDateTime.match(regDate);
         let endDateMatch = todo.dueDateTime?.match(regDate);
         if (startDateMatch) {
           todoEvent.start!.date = startDateMatch[1];
-          todoEvent.end!.date = endDateMatch ? endDateMatch[1] : startDateMatch[1];
+          let endDate = endDateMatch ? endDateMatch[1] : startDateMatch[1];
+          if (!window.moment(endDate, 'YYYY-MM-DD').isAfter(window.moment(startDateMatch[1], 'YYYY-MM-DD'))) {
+            endDate = nextDay(startDateMatch[1]);
+          }
+          todoEvent.end!.date = endDate;
           isValidEvent = true;
         } else if (endDateMatch) {
           todoEvent.start!.date = endDateMatch[1];
-          todoEvent.end!.date = endDateMatch[1];
+          todoEvent.end!.date = nextDay(endDateMatch[1]);
         }
       }
     }
@@ -191,21 +200,23 @@ export class Todo {
 
     if (eventMeta.description !== null && eventMeta.description !== undefined) {
       eventMeta.description = eventMeta.description.replace(/<\/?span>/g, '');
-      try {
-        blockId = JSON.parse(eventMeta.description).blockId;
-      } catch (e) { debug(`JSON parse error on ${eventMeta.description}: ${e}`); }
-      try {
-        priority = JSON.parse(eventMeta.description).priority;
-      } catch (e) { debug(`JSON parse error on ${eventMeta.description}: ${e}`); }
-      try {
-        eventStatus = JSON.parse(eventMeta.description).eventStatus;
-      } catch (e) { debug(`JSON parse error on ${eventMeta.description}: ${e}`); }
-      try {
-        tags = JSON.parse(eventMeta.description).tags;
-      } catch (e) { debug(`JSON parse error on ${eventMeta.description}: ${e}`); }
-      try {
-        doneDateTime = JSON.parse(eventMeta.description).doneDateTime;
-      } catch (e) { debug(`JSON parse error on ${eventMeta.description}: ${e}`); }
+      // Only attempt to parse the description as this plugin's metadata when it
+      // actually looks like a JSON object. Events created directly in Google
+      // Calendar (or from Gmail) have plain-text descriptions; parsing those
+      // five separate times used to spam the console with SyntaxErrors.
+      const trimmedDesc = eventMeta.description.trim();
+      if (trimmedDesc.startsWith('{') && trimmedDesc.endsWith('}')) {
+        try {
+          const meta = JSON.parse(trimmedDesc);
+          blockId = meta.blockId;
+          priority = meta.priority;
+          eventStatus = meta.eventStatus;
+          tags = meta.tags;
+          doneDateTime = meta.doneDateTime;
+        } catch (e) {
+          debug(`JSON parse error on ${eventMeta.description}: ${e}`);
+        }
+      }
     }
 
     if (!eventMeta.start || !eventMeta.end) {
